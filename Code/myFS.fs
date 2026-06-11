@@ -1,4 +1,5 @@
 #version 120
+
 varying vec3 v_Normal; 
 varying vec3 v_Position;
 varying vec2 v_texCoord;
@@ -16,6 +17,7 @@ struct u_Material
 
 uniform u_Material u_mat ;
 uniform sampler2D m_sampler;
+uniform int u_hasTexture;
 
 vec3 diffuse(vec3 N, vec3 L, vec3 color,float Id)
 {
@@ -50,7 +52,12 @@ vec3 BP_specular(vec3 N, vec3 L, float Id )
 
 void main(void) {
     // Lecture texture
-    vec4 color = texture2D(m_sampler,v_texCoord);
+    vec4 color;
+    if(u_hasTexture == 1)
+        color = texture2D(m_sampler,v_texCoord);
+    else
+        color = vec4(u_mat.diffuse, 1.0);
+
     vec4 colorTotal = color;
     // Config vecs
     vec3 N = normalize(v_Normal); // normale en repere monde 

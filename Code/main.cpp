@@ -1,3 +1,7 @@
+#include "Model.hpp"
+#include "Camera.hpp"
+#include "DragonData.h"
+#include "matrixHelper.hpp"
 #include "common/GLShader.h"
 #include <cstddef>
 #include <math.h>
@@ -6,30 +10,32 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <vector>
-#include "DragonData.h"
-#include "matrixHelper.hpp"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "libs/stb-master/stb_image.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "libs/stb-master/tiny_obj_loader.h"
+
+
+#pragma region Les modeles 3D affichés
+Model* modelKirby  = nullptr;
+Model* modelDragon = nullptr;
+#pragma endregion
+Camera* mainCam = nullptr;
 #pragma region Def des variables globales
 GLShader g_BasicShader; 
+GLuint texID_dragon;
 const int WIN_W = 960*2;
 const int WIN_H = 540*2;
-GLuint VBO_dragon;
-GLuint VAO_dragon;
-GLuint IBO_dragon;
-GLuint texID_dragon;
 int loc_rotationy;
 int loc_translate; 
 int loc_diffuse;
 int loc_specular;
 int loc_shininess;
 int loc_view;
+int loc_hasTexture;
+int loc_world;
 GLfloat angleD = 0;
-float mViewMatrix[16];
-float radius = 20.f;
-float theta;
-float phi;
-bool isDragging = false;
 #pragma endregion
 
 bool Initialise() 
@@ -37,7 +43,17 @@ bool Initialise()
     g_BasicShader.LoadVertexShader("myVS.vs");  
     g_BasicShader.LoadFragmentShader("myFS.fs"); 
     g_BasicShader.Create() ;
-    
+    modelKirby = new Model();
+    modelDragon = new Model();
+    mainCam = new Camera(WIN_W, WIN_H);
+    modelKirby->Load("../kirby.obj");
+    modelDragon->LoadFromData
+    (
+        DragonVertices, 
+        sizeof(DragonVertices) / sizeof(float), 
+        DragonIndices, 
+        sizeof(DragonIndices) / sizeof(uint16_t)
+    );
 #pragma region Config Matrices 
     float tX = 0.f;
     float tY = 0.f;
@@ -94,42 +110,22 @@ bool Initialise()
         0,0,0,1
     };
 
-    float nearClip = 0.1f;
-    float farClip= 1000.f;
-    float f=1/tan((90.f*M_PI/180)/2.0f); // Cotan(fov/2)
-    float aspect = (float)WIN_W/WIN_H;
-    float mPerspective[16]=
-    {
-        f/aspect,0,0,0,
-        0,f,0,0,
-        0,0,(farClip+nearClip)/(nearClip-farClip),-1,
-        0,0,(2*nearClip*farClip)/(nearClip-farClip),0
-    };
-
     float mTranslateRotateXYZ[16];
     float mWorldMatrix[16];
     multMatrix(mTranslate,mRotateXYZ,mTranslateRotateXYZ);
     multMatrix(mTranslateRotateXYZ,mScale,mWorldMatrix);
 
 #pragma endregion
-    
+    // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());
     glClearColor(0.5f, 0.5f, 0.5f, 1.f); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
 /// Dragon 
 #pragma region Def Buffers Dragon
-    glGenVertexArrays(1,&VAO_dragon);
-    glGenBuffers(1, &VBO_dragon);
-    glGenBuffers(1,&IBO_dragon);
-    glGenTextures(1,&texID_dragon);
-
-    glBindVertexArray(VAO_dragon);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_dragon);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO_dragon);
     //Texture ex 3
     {
         glActiveTexture(GL_TEXTURE0);
-        glGenTextures(1, &texID_dragon);
+        glGenTextures(1,&texID_dragon);
         glBindTexture(GL_TEXTURE_2D, texID_dragon);
         // Filtrage trilinéaire en minification et bilineaire en magnification
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -144,11 +140,9 @@ bool Initialise()
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
             stbi_image_free(data);
         }
+        else
+            std::cerr << "Failed to load texture: " << filename << std::endl;
     }
-    
-    glBufferData(GL_ARRAY_BUFFER, sizeof(DragonVertices), DragonVertices, GL_STATIC_DRAW);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(DragonIndices),DragonIndices, GL_STATIC_DRAW);
-
 #pragma endregion
     
 #pragma region Config
@@ -156,61 +150,23 @@ bool Initialise()
         // glBufferData alloue et transfert sizeof(Vertex) octets issus du tableau triangle
         auto basicProgram = g_BasicShader.GetProgram(); 
         glUseProgram(basicProgram); 
-        int stride = sizeof(float)*8;
-        //Position : 
-        {
-            int loc_position = glGetAttribLocation(basicProgram, "a_position");
-            glEnableVertexAttribArray(loc_position);
-            glVertexAttribPointer(loc_position, 3, GL_FLOAT, false, stride, (void*)0);
-        }
-        //Normale
-        {
-            int loc_normal = glGetAttribLocation(basicProgram,"a_normal");
-            glEnableVertexAttribArray(loc_normal);
-            glVertexAttribPointer(loc_normal, 3, GL_FLOAT, false, stride,(void*)(sizeof(float)*3) );
-        }
-        //Texture
-        {
-            int loc_texCoor = glGetAttribLocation(basicProgram,"a_texCoord");
-            glEnableVertexAttribArray(loc_texCoor);
-            glVertexAttribPointer(loc_texCoor,2,GL_FLOAT,false,stride,(void*)(sizeof(float)*6));
-        
-        }
-        //Effet sur les mats;
         {
             //Recuperation de la localisation des "effets" dans le shader
-            // loc_translate = glGetUniformLocation(basicProgram,"m_Translate");
-            // int loc_rotationx = glGetUniformLocation(basicProgram,"m_RotateX");
-            // int loc_rotationz = glGetUniformLocation(basicProgram,"m_RotateZ");
-            // loc_rotationy = glGetUniformLocation(basicProgram,"m_RotateY");
-            // int loc_scale = glGetUniformLocation(basicProgram,"m_Scale");
             int loc_persp = glGetUniformLocation(basicProgram,"m_Perspective");
             int loc_sampler = glGetUniformLocation(basicProgram,"m_sampler");
-            int loc_world = glGetUniformLocation(basicProgram,"m_WorldMatrix");
+            loc_world = glGetUniformLocation(basicProgram,"m_WorldMatrix");
             loc_view = glGetUniformLocation(basicProgram,"m_ViewMatrix");            
-
-            // Envoi des datas
-            // glUniformMatrix4fv(loc_rotationx,1,GL_FALSE,mRotateX);
-            // glUniformMatrix4fv(loc_rotationz,1,GL_FALSE,mRotateZ);
-            // glUniformMatrix4fv(loc_scale,1,GL_FALSE,mScale);
-            glUniformMatrix4fv(loc_persp,1,GL_FALSE,mPerspective);
-            glUniformMatrix4fv(loc_world,1,GL_FALSE,mWorldMatrix);
-            glUniform1i(loc_sampler,0);
-        }
-
-        //Couleurs diffuse et specular
-        {
+            loc_hasTexture = glGetUniformLocation(basicProgram,"u_hasTexture");
             loc_diffuse = glGetUniformLocation(basicProgram,"u_mat.diffuse");
             loc_specular = glGetUniformLocation(basicProgram,"u_mat.specular");
             loc_shininess = glGetUniformLocation(basicProgram,"u_mat.shininess");
-            float shine = 1.0f;    
+            
+            // Envoi des datas
+            // glUniformMatrix4fv(loc_persp,1,GL_FALSE,mainCam->GetProjectionMatrix());
+            glUniformMatrix4fv(loc_world,1,GL_FALSE,mWorldMatrix);
+            glUniform1i(loc_sampler,0);    
         }
     }
-
-    glBindVertexArray(0);
-    // je recommande de reinitialiser les etats a la fin pour eviter les effets de bord
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 #pragma endregion
 
 #ifdef WIN32 
@@ -220,51 +176,40 @@ bool Initialise()
 } 
  
 void Terminate() { 
-    g_BasicShader.Destroy(); 
-
-    glDeleteBuffers(1, &IBO_dragon);
-    glDeleteBuffers(1, &VBO_dragon);
-    glDeleteVertexArrays(1,&VAO_dragon);
+    delete modelKirby;
+    delete modelDragon;
+    delete mainCam;
+    g_BasicShader.Destroy();
     glDeleteTextures(1,&texID_dragon);
 }
 
 void Render()
 { 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        // Dessin dragon
-    glBindVertexArray(VAO_dragon);
-    // mTranslate[14] = -20.f;
-    
-    //angle+=.01;
-    // cy = cos(angle);
-    // sy = sin(angle);
-    
-    // mRotateY[0] = cy;
-    // mRotateY[1] = sy;
-    // mRotateY[4] = -sy;
-    // mRotateY[5] = cy;
-    
-    // Camera Orbitale
+    glUseProgram(g_BasicShader.GetProgram());
+    mainCam->Update();
+    glUniformMatrix4fv(loc_view, 1, GL_FALSE, mainCam->GetViewMatrix());
+    glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(), "m_Perspective"), 1, GL_FALSE, mainCam->GetProjectionMatrix());
+    //Dessin Kirby
     {
-        float camY = radius * sin(theta);
-        float camX = radius * cos(theta) * cos(phi);
-        float camZ = radius * cos(theta) * sin(phi);
-
-        LookAt(vec3{camX, camY, camZ}, vec3{0, 0, 0}, vec3{0, 1, 0}, mViewMatrix);
-
-        glUniformMatrix4fv(loc_view,1,GL_FALSE,mViewMatrix);    
-        // Position / Target / Up
-
+        glUniform1i(loc_hasTexture, 0);
+        glUniform3fv(loc_diffuse, 1, modelKirby->material.diffuse);
+        glUniform3fv(loc_specular, 1, modelKirby->material.specular);
+        glUniform1f(loc_shininess, modelKirby->material.shininess);
+        glUniform1i(loc_hasTexture, 0);
+        modelKirby->Draw();
     }
-    glUniform3f(loc_diffuse,   .1f, .8f, .4f);
-    glUniform3f(loc_specular,  .3f, .3f, .3f);  
-    glUniform1f(loc_shininess, 12.0f);
 
-
-    glDrawElements(GL_TRIANGLES,
-        45000,
-        GL_UNSIGNED_SHORT,
-        (void*)0);
+    // Dessin Dragon
+    {
+        glUniform1i(loc_hasTexture, 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texID_dragon);
+        glUniform3fv(loc_specular, 1, modelDragon->material.specular);
+        glUniform1f(loc_shininess, modelDragon->material.shininess);
+        glUniform1i(loc_hasTexture, 1);
+        modelDragon->Draw();
+    }
 }
 
 void Display(GLFWwindow* window)
@@ -276,37 +221,23 @@ void Display(GLFWwindow* window)
 
 void scroll_callback(GLFWwindow* window, double xpos, double yOffset)
 {
-    radius += (float) yOffset * 2.0f;
-    if(radius < 2.0f)
-        radius = 2.0f;
+    if(mainCam) mainCam->OnScroll(yOffset);
 }
+
 void mouse_button_callback( GLFWwindow* window, int button, int action, int mods)
 {
-    if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-    {
-        isDragging = true;
-    }
-    else if(button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-    {
-        isDragging = false;
-    }
+    if(mainCam) mainCam->OnMouseButton(button, action);
 }
+
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    if(isDragging)
+    if(mainCam)
     {
-        float deltaX = (float)xpos - WIN_W / 2.0f;
-        float deltaY = (float)ypos - WIN_H / 2.0f;
-
-        phi += deltaX * 0.005f; // Sensibilité de la rotation horizontale
-        theta += deltaY * 0.005f; // Sensibilité de la rotation verticale
-        // Limite pour éviter le retournement de la caméra 
-        float limitTheta = ((float)M_PI / 2.0f) - 0.01f; 
-        if(theta > limitTheta) theta = limitTheta;
-        if(theta < -limitTheta) theta =-limitTheta;
-
-        // Recentrer la souris
-        glfwSetCursorPos(window, WIN_W / 2.0, WIN_H / 2.0);
+        mainCam->OnMouseMove(xpos, ypos);
+        if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+            glfwSetCursorPos(window, WIN_W / 2.0, WIN_H / 2.0);
+        }
     }
 }
 
@@ -319,12 +250,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     // reset de la camera
     if(key == GLFW_KEY_R && action == GLFW_PRESS)
     {
-        theta = 0.0f;
-        phi = 0.0f;
-        radius = 20.f;
+        if(mainCam)mainCam->Reset();
+        
     }
 }
-
 
 int main(int argc, char **argv)
 {
@@ -350,7 +279,7 @@ int main(int argc, char **argv)
         std::cerr << "Error initializing GLEW: " << glewGetErrorString(error) << std::endl;
         return -1;
     }
-    glEnable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_FRAMEBUFFER_SRGB);
     Initialise();
