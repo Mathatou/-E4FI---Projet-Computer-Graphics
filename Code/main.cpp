@@ -40,6 +40,14 @@ int loc_shininess;
 int loc_view;
 int loc_hasTexture;
 int loc_world;
+GLuint FBO;
+GLuint fboTexture;
+GLuint RBO;
+
+GLuint quadVAO = 0;
+GLuint quadVBO = 0;
+GLShader g_PostProcessShader;
+
 
 float mWorldMatrixDragon[16];
 float mWorldMatrixKirby[16];
@@ -199,8 +207,65 @@ bool Initialise()
         if(blockIndex != GL_INVALID_INDEX)
             glUniformBlockBinding(basicProgram, blockIndex, 0);
     }
+#pragma endregion
 
+#pragma region Config FBO
+    {
+        glGenFramebuffers(1, &FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
+        glGenTextures(1, &fboTexture);
+        glBindTexture(GL_TEXTURE_2D, fboTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIN_W, WIN_H, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fboTexture, 0);
+
+        glGenRenderbuffers(1, &RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WIN_W, WIN_H);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cerr << "Error: Framebuffer is not complete!" << std::endl;
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+#pragma endregion
+
+#pragma region Config Quad pour PostProcess
+    {
+        float quadVertices[] = {
+            // positions   // texCoords
+            -1.0f,  1.0f,  0.0f, 1.0f,
+            -1.0f, -1.0f,  0.0f, 0.0f,
+             1.0f, -1.0f,  1.0f, 0.0f,
+
+            -1.0f,  1.0f,  0.0f, 1.0f,
+             1.0f, -1.0f,  1.0f, 0.0f,
+             1.0f,  1.0f,  1.0f, 1.0f
+        };
+
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+        
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        glBindVertexArray(0);
+
+        g_PostProcessShader.LoadVertexShader("postProcessVS.vs");
+        g_PostProcessShader.LoadFragmentShader("postProcessFS.fs");
+        g_PostProcessShader.Create();
+        
+    }
+#pragma endregion
+    
 #ifdef WIN32 
     wglSwapIntervalEXT(1); 
 #endif 
@@ -214,13 +279,22 @@ void Terminate() {
     glDeleteBuffers(1, &uboCamera);
     glDeleteTextures(1,&texID_dragon);
     g_BasicShader.Destroy();
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &quadVBO);
+    g_PostProcessShader.Destroy();
 }
 
 void Render()
 { 
+    // Ecrtiure dans le FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
     glUseProgram(g_BasicShader.GetProgram());
     mainCam->Update();
+    
     glBindBuffer(GL_UNIFORM_BUFFER, uboCamera);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, mainCam->GetViewMatrix());
     glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, mainCam->GetProjectionMatrix());
@@ -249,6 +323,21 @@ void Render()
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixDragon);
         modelDragon->Draw();
     }
+    // Lecture du FBO et affichage sur l'écran
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glDisable(GL_DEPTH_TEST);
+    
+    glUseProgram(g_PostProcessShader.GetProgram());
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, fboTexture);
+    glUniform1i(glGetUniformLocation(g_PostProcessShader.GetProgram(), "screenTexture"), 0);
+
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+    
 }
 
 void Display(GLFWwindow* window)
@@ -318,7 +407,7 @@ int main(int argc, char **argv)
         std::cerr << "Error initializing GLEW: " << glewGetErrorString(error) << std::endl;
         return -1;
     }
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_FRAMEBUFFER_SRGB);
     Initialise();
