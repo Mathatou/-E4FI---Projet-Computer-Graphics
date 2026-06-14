@@ -40,6 +40,10 @@ int loc_shininess;
 int loc_view;
 int loc_hasTexture;
 int loc_world;
+
+float mWorldMatrixDragon[16];
+float mWorldMatrixKirby[16];
+
 GLfloat angleD = 0;
 #pragma endregion
 
@@ -51,7 +55,7 @@ bool Initialise()
     modelKirby = new Model();
     modelDragon = new Model();
     mainCam = new Camera(WIN_W, WIN_H);
-    // modelKirby->Load("../kirby.obj");
+    modelKirby->Load("../kirby.obj");
     modelDragon->LoadFromData
     (
         DragonVertices, 
@@ -72,10 +76,10 @@ bool Initialise()
         tX,   tY,   tZ,   1.0f
     };
 
-    float cx = cos(0.7f);
-    float sx = sin(0.7f);
+    float cx = cos(0.5f);
+    float sx = sin(0.5f);
 
-    const float mRotateX[16] = {
+    float mRotateX[16] = {
         1, 0, 0, 0,  // Col 1
         0, cx, sx, 0,  // Col 2
         0, -sx, cx, 0, // Col 3
@@ -85,16 +89,16 @@ bool Initialise()
     float cy = cos(angleD);
     float sy = sin(angleD);
     
-    const float mRotateY[16] = {
+    float mRotateY[16] = {
         cy, sy, 0, 0,  // Col 1
         -sy, cy, 0, 0,  // Col 2
         0, 0, 1, 0, // Col 3
         0, 0, 0, 1   // Col 4
     };
 
-    float cz = cos(0.7f);
-    float sz = sin(0.7f);
-    const float mRotateZ[16] = 
+    float cz = cos(0.5f);
+    float sz = sin(0.5f);
+    float mRotateZ[16] = 
     {
         cz,0,-sz,0,
         0,1,0,0,
@@ -116,9 +120,17 @@ bool Initialise()
     };
 
     float mTranslateRotateXYZ[16];
-    float mWorldMatrix[16];
     multMatrix(mTranslate,mRotateXYZ,mTranslateRotateXYZ);
-    multMatrix(mTranslateRotateXYZ,mScale,mWorldMatrix);
+    multMatrix(mTranslateRotateXYZ,mScale,mWorldMatrixDragon);
+    
+    mTranslate[13] = -15.0f;
+    mTranslate[14] = -10.0f;
+    mRotateX[5] = cos (1.5f);
+    mRotateX[6] = sin (1.5f);
+    mRotateX[9] = -sin(1.5f);
+    mRotateX[10] = cos(1.5f);
+    multMatrix(mTranslate,mRotateXYZ,mTranslateRotateXYZ);
+    multMatrix(mTranslate,mScale,mWorldMatrixKirby);
 
 #pragma endregion
     // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());
@@ -168,7 +180,6 @@ bool Initialise()
             
             // Envoi des datas
             // glUniformMatrix4fv(loc_persp,1,GL_FALSE,mainCam->GetProjectionMatrix());
-            glUniformMatrix4fv(loc_world,1,GL_FALSE,mWorldMatrix);
             glUniform1i(loc_sampler,0);    
         }
     }
@@ -223,11 +234,11 @@ void Render()
         glUniform3fv(loc_specular, 1, modelKirby->material.specular);
         glUniform1f(loc_shininess, modelKirby->material.shininess);
         glUniform1i(loc_hasTexture, 0);
+        glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixKirby);
         modelKirby->Draw();
     }
-
     // Dessin Dragon
-    
+    if(modelDragon)
     {
         glUniform1i(loc_hasTexture, 1);
         glActiveTexture(GL_TEXTURE0);
@@ -235,6 +246,7 @@ void Render()
         glUniform3fv(loc_specular, 1, modelDragon->material.specular);
         glUniform1f(loc_shininess, modelDragon->material.shininess);
         glUniform1i(loc_hasTexture, 1);
+        glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixDragon);
         modelDragon->Draw();
     }
 }
