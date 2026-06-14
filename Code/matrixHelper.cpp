@@ -84,3 +84,59 @@ void LookAt(vec3 position, vec3 target, vec3 up, float* viewMatrix)
     viewMatrix[15] = 1.0f;
     
 }
+/// @brief Creates a transformation matrix from translation, rotation, and scale components
+/// @param tx translation on X 
+/// @param ty translation on Y
+/// @param tz translation on Z
+/// @param rx rotation on X
+/// @param ry rotation on Y
+/// @param rz rotation on Z
+/// @param scale scale
+/// @param out the new matrix
+void MakeTRSMatrix(
+    float tx, float ty, float tz,
+    float rx, float ry, float rz,  // Euler angles
+    float scale,
+    float* out)
+{
+    float cx = cos(rx), sx = sin(rx);
+    float cy = cos(ry), sy = sin(ry);
+    float cz = cos(rz), sz = sin(rz);
+
+    float mT[16]={
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        tx,   ty,   tz,   1.0f
+    };
+
+    float mRX[16]={
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, cx,   sx,   0.0f,
+        0.0f, -sx,  cx,   0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+    float mRY[16] = { 
+        cy,sy,0,0, 
+        -sy,cy,0,0, 
+        0,0,1,0,    
+        0,0,0,1 
+    };
+    float mRZ[16] = { 
+        cz,0,-sz,0, 
+        0,1,0,0,  
+        sz,0,cz,0,   
+        0,0,0,1 
+    };
+    float mS[16] = {
+        scale,0,0,0,
+        0,scale,0,0,
+        0,0,scale,0,
+        0,0,0,1
+    };
+    float tmp1[16],tmp2[16],tmp3[16];
+    multMatrix(mRY,mRX,tmp1);
+    multMatrix(tmp1,mRZ,tmp2); // RY * RX * RZ
+    multMatrix(tmp2,mS,tmp3); // T * R
+    multMatrix(mT,tmp3,out); // T * R * S 
+}
