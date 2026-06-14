@@ -1,8 +1,11 @@
-#version 120
+#version 330 core
 
-varying vec3 v_Normal; 
-varying vec3 v_Position;
-varying vec2 v_texCoord;
+in vec3 v_Normal; 
+in vec3 v_Position;
+in vec2 v_texCoord;
+
+out vec4 FragColor;
+
 const vec3 LightDirection = vec3(1.0, -1.0, -1.0);
 const vec3 SkyVec = vec3(0.0,1.0,0.0);
 const float ambientIntensity = 0.7;
@@ -54,7 +57,7 @@ void main(void) {
     // Lecture texture
     vec4 color;
     if(u_hasTexture == 1)
-        color = texture2D(m_sampler,v_texCoord);
+        color = texture(m_sampler,v_texCoord);
     else
         color = vec4(u_mat.diffuse, 1.0);
 
@@ -66,6 +69,7 @@ void main(void) {
     // Calcul lumiere
     vec3 diffuseColor  = diffuse(N, L,colorTotal.rgb, Id );
     vec3 specularColor = specular(N,L ,Id);
+    //vec3 BPSpecularColor = BP_specular(N,L ,Id);
     //vec3 ambientColor = vec3(ambientIntensity) * colorTotal.rgb;
     
     float NdotSky = dot(N,SkyVec);
@@ -76,5 +80,5 @@ void main(void) {
     vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(SkyColor,GroundColor,Hemispherefactor);
     //Mix
     vec3 PhongIllumination = ambiant + diffuseColor + specularColor;
-    gl_FragColor = vec4(PhongIllumination, 1.0);
+    FragColor = vec4(PhongIllumination, 1.0);
 }
