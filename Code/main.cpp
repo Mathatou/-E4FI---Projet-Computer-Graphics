@@ -71,74 +71,9 @@ bool Initialise()
         DragonIndices, 
         sizeof(DragonIndices) / sizeof(uint16_t)
     );
-#pragma region Config Matrices 
-    float tX = 0.f;
-    float tY = 0.f;
-    float tZ = -0.f;
-    
-    float mTranslate[16] = 
-    {
-        1.0f, 0.0f, 0.0f, 0.0f, 
-        0.0f, 1.0f, 0.0f, 0.0f, 
-        0.0f, 0.0f, 1.0f, 0.0f, 
-        tX,   tY,   tZ,   1.0f
-    };
 
-    float cx = cos(0.5f);
-    float sx = sin(0.5f);
-
-    float mRotateX[16] = {
-        1, 0, 0, 0,  // Col 1
-        0, cx, sx, 0,  // Col 2
-        0, -sx, cx, 0, // Col 3
-        0, 0, 0, 1   // Col 4
-    };
-    
-    float cy = cos(angleD);
-    float sy = sin(angleD);
-    
-    float mRotateY[16] = {
-        cy, sy, 0, 0,  // Col 1
-        -sy, cy, 0, 0,  // Col 2
-        0, 0, 1, 0, // Col 3
-        0, 0, 0, 1   // Col 4
-    };
-
-    float cz = cos(0.5f);
-    float sz = sin(0.5f);
-    float mRotateZ[16] = 
-    {
-        cz,0,-sz,0,
-        0,1,0,0,
-        sz,0,cz,0,
-        0,0,0,1
-    };
-    float mRotateXY[16];
-    float mRotateXYZ[16];
-    multMatrix(mRotateY,mRotateX,mRotateXY);
-    multMatrix(mRotateXY,mRotateZ,mRotateXYZ);
-
-    float scale = 1;
-    float mScale[16]=
-    {
-        scale,0,0,0,
-        0,scale,0,0,
-        0,0,scale,0,
-        0,0,0,1
-    };
-
-    float mTranslateRotateXYZ[16];
-    multMatrix(mTranslate,mRotateXYZ,mTranslateRotateXYZ);
-    multMatrix(mTranslateRotateXYZ,mScale,mWorldMatrixDragon);
-    
-    mTranslate[13] = -15.0f;
-    mTranslate[14] = -10.0f;
-    mRotateX[5] = cos (1.5f);
-    mRotateX[6] = sin (1.5f);
-    mRotateX[9] = -sin(1.5f);
-    mRotateX[10] = cos(1.5f);
-    multMatrix(mTranslate,mRotateXYZ,mTranslateRotateXYZ);
-    multMatrix(mTranslate,mScale,mWorldMatrixKirby);
+    MakeTRSMatrix(0.f, 0.f, 0.f, 0.5f, 0.f, 0.5f, 1.0f, mWorldMatrixDragon);
+    MakeTRSMatrix(0.f, -15.f, -10.f, 1.5f, 0.f, 0.5f, 1.0f, mWorldMatrixKirby);
 
 #pragma endregion
     // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());
