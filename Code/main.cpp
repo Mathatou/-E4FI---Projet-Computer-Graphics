@@ -21,7 +21,12 @@
 Model* modelKirby  = nullptr;
 Model* modelDragon = nullptr;
 #pragma endregion
+
+
 Camera* mainCam = nullptr;
+GLuint uboCamera = 0;
+
+
 #pragma region Def des variables globales
 GLShader g_BasicShader; 
 GLuint texID_dragon;
@@ -46,7 +51,7 @@ bool Initialise()
     modelKirby = new Model();
     modelDragon = new Model();
     mainCam = new Camera(WIN_W, WIN_H);
-    modelKirby->Load("../kirby.obj");
+    // modelKirby->Load("../kirby.obj");
     modelDragon->LoadFromData
     (
         DragonVertices, 
@@ -169,6 +174,22 @@ bool Initialise()
     }
 #pragma endregion
 
+#pragma region Config UBO Camera
+    {
+        glGenBuffers(1, &uboCamera);
+        glBindBuffer(GL_UNIFORM_BUFFER, uboCamera);
+        glBufferData(GL_UNIFORM_BUFFER, 2 * 64, NULL, GL_STATIC_DRAW);
+
+        glBindBufferBase(GL_UNIFORM_BUFFER, 0, uboCamera);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        auto basicProgram = g_BasicShader.GetProgram();
+        GLuint blockIndex = glGetUniformBlockIndex(basicProgram, "CameraData");
+        
+        if(blockIndex != GL_INVALID_INDEX)
+            glUniformBlockBinding(basicProgram, blockIndex, 0);
+    }
+
+
 #ifdef WIN32 
     wglSwapIntervalEXT(1); 
 #endif 
@@ -179,8 +200,9 @@ void Terminate() {
     delete modelKirby;
     delete modelDragon;
     delete mainCam;
-    g_BasicShader.Destroy();
+    glDeleteBuffers(1, &uboCamera);
     glDeleteTextures(1,&texID_dragon);
+    g_BasicShader.Destroy();
 }
 
 void Render()
@@ -188,9 +210,13 @@ void Render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(g_BasicShader.GetProgram());
     mainCam->Update();
-    glUniformMatrix4fv(loc_view, 1, GL_FALSE, mainCam->GetViewMatrix());
-    glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(), "m_Perspective"), 1, GL_FALSE, mainCam->GetProjectionMatrix());
+    glBindBuffer(GL_UNIFORM_BUFFER, uboCamera);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, mainCam->GetViewMatrix());
+    glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, mainCam->GetProjectionMatrix());
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    
     //Dessin Kirby
+    if(modelKirby)
     {
         glUniform1i(loc_hasTexture, 0);
         glUniform3fv(loc_diffuse, 1, modelKirby->material.diffuse);
@@ -201,6 +227,7 @@ void Render()
     }
 
     // Dessin Dragon
+    
     {
         glUniform1i(loc_hasTexture, 1);
         glActiveTexture(GL_TEXTURE0);
