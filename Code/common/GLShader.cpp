@@ -39,6 +39,10 @@ bool ValidateShader(GLuint shader)
 char* LoadFile(const char* filename)
 {
 	std::ifstream fin(filename, std::ios::in | std::ios::binary);
+    if (!fin.is_open()) {
+        std::cerr << "ERREUR CRITIQUE : Impossible de trouver le fichier shader : " << filename << std::endl;
+        exit(1); // On arrête proprement le programme au lieu de Segfault
+    }
 	fin.seekg(0, std::ios::end);
 	uint32_t length = (uint32_t)fin.tellg();
 	fin.seekg(0, std::ios::beg);
