@@ -57,13 +57,17 @@ GLfloat angleD = 0;
 
 bool Initialise() 
 { 
+    // Loading basic shaders
     g_BasicShader.LoadVertexShader("myVS.vs");  
     g_BasicShader.LoadFragmentShader("myFS.fs"); 
     g_BasicShader.Create() ;
+
+    // Loading 3D models and the cam
     modelKirby = new Model();
     modelDragon = new Model();
     mainCam = new Camera(WIN_W, WIN_H);
-    modelKirby->Load("../kirby.obj");
+    // Loading the models from OBJs and .h file
+    modelKirby->Load("../2_OBJs/kirby.obj");
     modelDragon->LoadFromData
     (
         DragonVertices, 
@@ -71,9 +75,16 @@ bool Initialise()
         DragonIndices, 
         sizeof(DragonIndices) / sizeof(uint16_t)
     );
-
-    MakeTRSMatrix(0.f, 0.f, 0.f, 0.5f, 0.f, 0.5f, 1.0f, mWorldMatrixDragon);
-    MakeTRSMatrix(0.f, -15.f, -10.f, 1.5f, 0.f, 0.5f, 1.0f, mWorldMatrixKirby);
+    /// Creating the world matrices for the 3D models
+    /// Look at tooltip to see what are the parameters of the function
+    MakeTRSMatrix(
+        0.f, 0.f, 0.f, 
+        0.5f, 0.f, 0.5f, 
+        1.0f, mWorldMatrixDragon);
+    MakeTRSMatrix(
+        0.f, -15.f, 0.f, 
+        -1.5f, 0.f, 0.5f, 
+        1.0f, mWorldMatrixKirby);
 
 #pragma endregion
     // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());

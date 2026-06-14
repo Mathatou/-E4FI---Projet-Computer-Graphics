@@ -10,6 +10,9 @@ Model::~Model() {
     if (VAO) glDeleteVertexArrays(1, &VAO);
 }
 
+/// @brief Load a 3D model from an OBJ file using TinyObjLoader.
+/// @param filename The path to the OBJ file.
+/// @return If it is loaded successfully, return true. Otherwise, return false.
 bool Model::Load(const std::string& filename)
 {
     tinyobj::attrib_t attrib;
@@ -118,6 +121,12 @@ bool Model::Load(const std::string& filename)
     return true;
 }
 
+/// @brief Load a 3D model from raw vertex and index data.
+/// @param vertexData A pointer to the vertex data.
+/// @param vertexCount The number of vertices.
+/// @param indexData A pointer to the index data.
+/// @param indexCount The number of indices.
+/// @return If it is loaded successfully, return true. Otherwise, return false.
 bool Model::LoadFromData(const float* vertexData, size_t vertexCount, const uint16_t* indexData, size_t indexCount)
 {
     this->indexCount=static_cast<GLsizei>(indexCount);
