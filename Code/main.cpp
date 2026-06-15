@@ -435,7 +435,10 @@ void Display(GLFWwindow* window)
 			"Noir et Blanc", 
 			"Flou (Box Blur)",
 			"Sepia",
-			"Noyau de Convolution" 
+			"Noyau de Convolution",
+            "Vignettage",
+            "Aberration Chromatique",
+            "Pixellisation"
 		};
 	
 		// Ce combo va modifier directement 'currentEffect' avec l'index de l'élément choisi (0, 1, 2 ou 3)
