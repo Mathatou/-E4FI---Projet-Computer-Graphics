@@ -297,63 +297,80 @@ void Display(GLFWwindow* window)
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-    ImGui::Text("Change Kirby Color : ");
-    if(ImGui::BeginCombo("Kirby Color", "Select Color"))
+    ImGui::Spacing();
+    if(ImGui::CollapsingHeader("Kirby Material Settings"))
     {
-        if (ImGui::Selectable("Pink(ish)")) {
-            modelKirby->material.diffuse[0] = 1.0f;
-            modelKirby->material.diffuse[1] = 0.254f;
-            modelKirby->material.diffuse[2] = 0.738f;
+        ImGui::Spacing();
+        ImGui::Text("Ambient : ");
+        ImGui::SliderFloat("kirby_ambient0", &modelKirby->material.ambient[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("kirby_ambient1", &modelKirby->material.ambient[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("kirby_ambient2", &modelKirby->material.ambient[2], 0.0f, 1.0f);
+        ImGui::Text("Change Kirby Color : ");
+        if(ImGui::BeginCombo("Kirby Color", "Select Color"))
+        {
+            if (ImGui::Selectable("Pink(ish)")) {
+                modelKirby->material.diffuse[0] = 1.0f;
+                modelKirby->material.diffuse[1] = 0.254f;
+                modelKirby->material.diffuse[2] = 0.738f;
+            }
+            if(ImGui::Selectable("Red")) {
+                modelKirby->material.diffuse[0] = 1.0f;
+                modelKirby->material.diffuse[1] = 0.0f;
+                modelKirby->material.diffuse[2] = 0.0f;
+            }
+            if(ImGui::Selectable("Green")) {
+                modelKirby->material.diffuse[0] = 0.0f;
+                modelKirby->material.diffuse[1] = 1.0f;
+                modelKirby->material.diffuse[2] = 0.0f;
+            }
+            if(ImGui::Selectable("Blue")) {
+                modelKirby->material.diffuse[0] = 0.0f;
+                modelKirby->material.diffuse[1] = 0.0f;
+                modelKirby->material.diffuse[2] = 1.0f;
+            }
+            ImGui::EndCombo();
         }
-        if(ImGui::Selectable("Red")) {
-            modelKirby->material.diffuse[0] = 1.0f;
-            modelKirby->material.diffuse[1] = 0.0f;
-            modelKirby->material.diffuse[2] = 0.0f;
-        }
-        if(ImGui::Selectable("Green")) {
-            modelKirby->material.diffuse[0] = 0.0f;
-            modelKirby->material.diffuse[1] = 1.0f;
-            modelKirby->material.diffuse[2] = 0.0f;
-        }
-        if(ImGui::Selectable("Blue")) {
-            modelKirby->material.diffuse[0] = 0.0f;
-            modelKirby->material.diffuse[1] = 0.0f;
-            modelKirby->material.diffuse[2] = 1.0f;
-        }
-        ImGui::EndCombo();
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Color : ");
+        ImGui::SliderFloat("kirby_diffuse0", &modelKirby->material.diffuse[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("kirby_diffuse1", &modelKirby->material.diffuse[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("kirby_diffuse2", &modelKirby->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Shininess : ");
+        ImGui::SliderFloat("kirby_shininess", &modelKirby->material.shininess, 1.0f, 128.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Specular : ");
+        ImGui::SliderFloat("Kirby_specular0", &modelKirby->material.specular[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Kirby_specular1", &modelKirby->material.specular[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Kirby_specular2", &modelKirby->material.specular[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        
     }
-    ImGui::Spacing();
-    ImGui::Text("Adjust Kirby Color : ");
-    ImGui::SliderFloat("kirby_diffuse0", &modelKirby->material.diffuse[0], 0.0f, 1.0f);
-    ImGui::SliderFloat("kirby_diffuse1", &modelKirby->material.diffuse[1], 0.0f, 1.0f);
-    ImGui::SliderFloat("kirby_diffuse2", &modelKirby->material.diffuse[2], 0.0f, 1.0f);
-    ImGui::Spacing();
-    ImGui::Text("Adjust Kirby Shininess : ");
-    ImGui::SliderFloat("kirby_shininess", &modelKirby->material.shininess, 1.0f, 128.0f);
-    ImGui::Spacing();
-    ImGui::Text("Adjust Kirby Specular : ");
-    ImGui::SliderFloat("Kirby_specular0", &modelKirby->material.specular[0], 0.0f, 1.0f);
-    ImGui::SliderFloat("Kirby_specular1", &modelKirby->material.specular[1], 0.0f, 1.0f);
-    ImGui::SliderFloat("Kirby_specular2", &modelKirby->material.specular[2], 0.0f, 1.0f);
-    ImGui::Spacing();
-    
-    ImGui::Checkbox("Toggle Dragon Texture", &hasTexture);
-    if(!hasTexture) 
+    if(ImGui::CollapsingHeader("Dragon Material Settings"))
     {
-        ImGui::Text("Adjust Dragon Color : ");
-        ImGui::SliderFloat("dragon_diffuse0", &modelDragon->material.diffuse[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("dragon_diffuse1", &modelDragon->material.diffuse[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("dragon_diffuse2", &modelDragon->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        ImGui::Text("Ambient : ");
+        ImGui::SliderFloat("dragon_ambient0", &modelDragon->material.ambient[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_ambient1", &modelDragon->material.ambient[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_ambient2", &modelDragon->material.ambient[2], 0.0f, 1.0f);
+        ImGui::Checkbox("Toggle Dragon Texture", &hasTexture);
+        if(!hasTexture) 
+        {
+            ImGui::Text("Adjust Dragon Color : ");
+            ImGui::SliderFloat("dragon_diffuse0", &modelDragon->material.diffuse[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("dragon_diffuse1", &modelDragon->material.diffuse[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("dragon_diffuse2", &modelDragon->material.diffuse[2], 0.0f, 1.0f);
+        }
+        ImGui::Spacing();
+        ImGui::Text("Adjust Dragon Shininess : ");
+        ImGui::SliderFloat("dragon_shininess", &modelDragon->material.shininess, 1.0f, 128.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Dragon Specular : ");
+        ImGui::SliderFloat("dragon_specular0", &modelDragon->material.specular[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_specular1", &modelDragon->material.specular[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_specular2", &modelDragon->material.specular[2], 0.0f, 1.0f);
+        ImGui::Spacing();
     }
-    ImGui::Spacing();
-    ImGui::Text("Adjust Dragon Shininess : ");
-    ImGui::SliderFloat("dragon_shininess", &modelDragon->material.shininess, 1.0f, 128.0f);
-    ImGui::Spacing();
-    ImGui::Text("Adjust Dragon Specular : ");
-    ImGui::SliderFloat("dragon_specular0", &modelDragon->material.specular[0], 0.0f, 1.0f);
-    ImGui::SliderFloat("dragon_specular1", &modelDragon->material.specular[1], 0.0f, 1.0f);
-    ImGui::SliderFloat("dragon_specular2", &modelDragon->material.specular[2], 0.0f, 1.0f);
-    ImGui::Spacing();
 
     // Rendering
     ImGui::Render();
