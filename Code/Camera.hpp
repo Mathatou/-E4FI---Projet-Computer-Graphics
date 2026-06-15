@@ -12,6 +12,9 @@ class Camera {
 public:
     // Le constructeur initialise la caméra et calcule la matrice de projection
     Camera(int width, int height);
+    float radius;
+    float theta;
+    float phi;
 
     // Met à jour la matrice de vue (à appeler dans Render)
     void Update();
@@ -27,9 +30,6 @@ public:
     const float* GetProjectionMatrix() const { return mPerspective; }
 
 private:
-    float radius;
-    float theta;
-    float phi;
     bool isDragging;
     
     int winWidth;
