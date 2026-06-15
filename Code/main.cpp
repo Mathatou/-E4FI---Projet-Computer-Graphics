@@ -26,9 +26,6 @@ Model* modelKirby  = nullptr;
 Model* modelDragon = nullptr;
 #pragma endregion
 
-
-
-
 #pragma region Def des variables globales
 const int WIN_W = 960*2;
 const int WIN_H = 540*2;
@@ -51,6 +48,7 @@ GLuint FBO;
 GLuint fboTexture;
 GLuint RBO;
 bool hasTexture = true;
+bool useWireframe = false;
 int currentEffect = 0;       // 0 = Normal, 1 = Inversion, 2 = Noir & Blanc, 3 = Flou
 int loc_postProcessEffect;   // Pour stocker l'uniform du shader
 GLuint quadVAO = 0;
@@ -423,18 +421,30 @@ void Display(GLFWwindow* window)
             mainCam->Reset();
     }
     
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::Text("Post-Process Effects");
-
-	// Tableau contenant le nom de nos effets
-	const char* effects[] = { "Normal (Aucun)", "Inversion des couleurs", "Noir et Blanc", "Flou (Box Blur)" };
-
-	// Ce combo va modifier directement 'currentEffect' avec l'index de l'élément choisi (0, 1, 2 ou 3)
-	if (ImGui::Combo("Choix de l'effet", &currentEffect, effects, IM_ARRAYSIZE(effects)))
+	/// Post-Process Effects
 	{
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::Text("Post-Process Effects");
+	
+		// Tableau contenant le nom de nos effets
+		const char* effects[] = 
+		{ 
+			"Normal (Aucun)", 
+			"Inversion des couleurs", 
+			"Noir et Blanc", 
+			"Flou (Box Blur)",
+			"Sepia",
+			"Noyau de Convolution" 
+		};
+	
+		// Ce combo va modifier directement 'currentEffect' avec l'index de l'élément choisi (0, 1, 2 ou 3)
+		if (ImGui::Combo("Choix de l'effet", &currentEffect, effects, IM_ARRAYSIZE(effects)))
+		{
+		}
 	}
 	
+
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
