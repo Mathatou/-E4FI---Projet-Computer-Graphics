@@ -3,6 +3,9 @@
 #include "DragonData.h"
 #include "matrixHelper.hpp"
 #include "common/GLShader.h"
+#include "libs/imgui-master/imgui.h"
+#include "libs/imgui-master/backends/imgui_impl_glfw.h"
+#include "libs/imgui-master/backends/imgui_impl_opengl3.h"
 #include <cstddef>
 #include <math.h>
 #include <GL/glew.h>
@@ -16,6 +19,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "libs/stb-master/tiny_obj_loader.h"
 
+GLFWwindow* window;
 
 #pragma region Les modeles 3D affichés
 Model* modelKirby  = nullptr;
@@ -43,6 +47,7 @@ int loc_world;
 GLuint FBO;
 GLuint fboTexture;
 GLuint RBO;
+bool hasTexture = true;
 
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
@@ -57,6 +62,16 @@ GLfloat angleD = 0;
 
 bool Initialise() 
 { 
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplOpenGL3_Init("#version 330 core"); // GLSL version. If using GL ES 2.0, set to "#version 100"
+
     // Loading basic shaders
     g_BasicShader.LoadVertexShader("myVS.vs");  
     g_BasicShader.LoadFragmentShader("myFS.fs"); 
@@ -218,17 +233,6 @@ bool Initialise()
     return true;  
 } 
  
-void Terminate() { 
-    delete modelKirby;
-    delete modelDragon;
-    delete mainCam;
-    glDeleteBuffers(1, &uboCamera);
-    glDeleteTextures(1,&texID_dragon);
-    g_BasicShader.Destroy();
-    glDeleteVertexArrays(1, &quadVAO);
-    glDeleteBuffers(1, &quadVBO);
-    g_PostProcessShader.Destroy();
-}
 
 void Render()
 { 
@@ -260,12 +264,12 @@ void Render()
     // Dessin Dragon
     if(modelDragon)
     {
-        glUniform1i(loc_hasTexture, 1);
+        glUniform1i(loc_hasTexture, hasTexture ? 1 : 0);     
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texID_dragon);
+        glUniform3fv(loc_diffuse, 1, modelDragon->material.diffuse);
         glUniform3fv(loc_specular, 1, modelDragon->material.specular);
         glUniform1f(loc_shininess, modelDragon->material.shininess);
-        glUniform1i(loc_hasTexture, 1);
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixDragon);
         modelDragon->Draw();
     }
@@ -279,7 +283,7 @@ void Render()
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fboTexture);
     glUniform1i(glGetUniformLocation(g_PostProcessShader.GetProgram(), "screenTexture"), 0);
-
+    
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -289,8 +293,87 @@ void Render()
 void Display(GLFWwindow* window)
 {
     Render();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Text("Change Kirby Color : ");
+    if(ImGui::BeginCombo("Kirby Color", "Select Color"))
+    {
+        if (ImGui::Selectable("Pink(ish)")) {
+            modelKirby->material.diffuse[0] = 1.0f;
+            modelKirby->material.diffuse[1] = 0.254f;
+            modelKirby->material.diffuse[2] = 0.738f;
+        }
+        if(ImGui::Selectable("Red")) {
+            modelKirby->material.diffuse[0] = 1.0f;
+            modelKirby->material.diffuse[1] = 0.0f;
+            modelKirby->material.diffuse[2] = 0.0f;
+        }
+        if(ImGui::Selectable("Green")) {
+            modelKirby->material.diffuse[0] = 0.0f;
+            modelKirby->material.diffuse[1] = 1.0f;
+            modelKirby->material.diffuse[2] = 0.0f;
+        }
+        if(ImGui::Selectable("Blue")) {
+            modelKirby->material.diffuse[0] = 0.0f;
+            modelKirby->material.diffuse[1] = 0.0f;
+            modelKirby->material.diffuse[2] = 1.0f;
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::Spacing();
+    ImGui::Text("Adjust Kirby Color : ");
+    ImGui::SliderFloat("kirby_diffuse0", &modelKirby->material.diffuse[0], 0.0f, 1.0f);
+    ImGui::SliderFloat("kirby_diffuse1", &modelKirby->material.diffuse[1], 0.0f, 1.0f);
+    ImGui::SliderFloat("kirby_diffuse2", &modelKirby->material.diffuse[2], 0.0f, 1.0f);
+    ImGui::Spacing();
+    ImGui::Text("Adjust Kirby Shininess : ");
+    ImGui::SliderFloat("kirby_shininess", &modelKirby->material.shininess, 1.0f, 128.0f);
+    ImGui::Spacing();
+    ImGui::Text("Adjust Kirby Specular : ");
+    ImGui::SliderFloat("Kirby_specular0", &modelKirby->material.specular[0], 0.0f, 1.0f);
+    ImGui::SliderFloat("Kirby_specular1", &modelKirby->material.specular[1], 0.0f, 1.0f);
+    ImGui::SliderFloat("Kirby_specular2", &modelKirby->material.specular[2], 0.0f, 1.0f);
+    ImGui::Spacing();
+    
+    ImGui::Checkbox("Toggle Dragon Texture", &hasTexture);
+    if(!hasTexture) 
+    {
+        ImGui::Text("Adjust Dragon Color : ");
+        ImGui::SliderFloat("dragon_diffuse0", &modelDragon->material.diffuse[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_diffuse1", &modelDragon->material.diffuse[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("dragon_diffuse2", &modelDragon->material.diffuse[2], 0.0f, 1.0f);
+    }
+    ImGui::Spacing();
+    ImGui::Text("Adjust Dragon Shininess : ");
+    ImGui::SliderFloat("dragon_shininess", &modelDragon->material.shininess, 1.0f, 128.0f);
+    ImGui::Spacing();
+    ImGui::Text("Adjust Dragon Specular : ");
+    ImGui::SliderFloat("dragon_specular0", &modelDragon->material.specular[0], 0.0f, 1.0f);
+    ImGui::SliderFloat("dragon_specular1", &modelDragon->material.specular[1], 0.0f, 1.0f);
+    ImGui::SliderFloat("dragon_specular2", &modelDragon->material.specular[2], 0.0f, 1.0f);
+    ImGui::Spacing();
+
+    // Rendering
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window);
     glfwPollEvents();
+}
+void Terminate() { 
+    delete modelKirby;
+    delete modelDragon;
+    delete mainCam;
+    glDeleteBuffers(1, &uboCamera);
+    glDeleteTextures(1,&texID_dragon);
+    g_BasicShader.Destroy();
+    glDeleteVertexArrays(1, &quadVAO);
+    glDeleteBuffers(1, &quadVBO);
+    g_PostProcessShader.Destroy();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void scroll_callback(GLFWwindow* window, double xpos, double yOffset)
@@ -300,11 +383,13 @@ void scroll_callback(GLFWwindow* window, double xpos, double yOffset)
 
 void mouse_button_callback( GLFWwindow* window, int button, int action, int mods)
 {
+    if(ImGui::GetIO().WantCaptureMouse) return; // Ignore mouse events if ImGui wants to capture them
     if(mainCam) mainCam->OnMouseButton(button, action);
 }
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    if(ImGui::GetIO().WantCaptureMouse) return; // Ignore mouse events if ImGui wants to capture them
     if(mainCam)
     {
         mainCam->OnMouseMove(xpos, ypos);
@@ -331,8 +416,6 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 int main(int argc, char **argv)
 {
-    GLFWwindow* window;
-
     if(!glfwInit())
         return -1;
 
