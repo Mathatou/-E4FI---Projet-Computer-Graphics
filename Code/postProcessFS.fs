@@ -3,11 +3,30 @@ out vec4 FragColor;
 in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
-
+uniform int u_effect; // 0 = Normal, 1 = Inversion, 2 = Noir & Blanc, 3 = Flou
 void main() {
     vec3 col = texture(screenTexture, TexCoords).rgb;
     
-    // col = vec3(1.0) - col; // Couleurs en négatif 
-
+    switch(u_effect) {
+        case 1: // Inversion
+            col = vec3(1.0) - col;
+            break;
+        case 2: // Noir & Blanc
+            float gray = dot(col, vec3(0.299, 0.587, 0.114));
+            col = vec3(gray);
+            break;
+        case 3: // Flou (Blur)
+            float offset = 1.0 / 300.0; // Adjust the offset for blur effect
+            vec3 blurCol = vec3(0.0);
+            for(int x = -1; x <= 1; x++) {
+                for(int y = -1; y <= 1; y++) {
+                    blurCol += texture(screenTexture, TexCoords + vec2(x, y) * offset).rgb;
+                }
+            }
+            col = blurCol / 9.0; // Average the colors
+            break;
+        default:
+            break; // Normal
+    }
     FragColor = vec4(col, 1.0);
 }

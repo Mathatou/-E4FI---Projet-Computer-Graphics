@@ -51,7 +51,8 @@ GLuint FBO;
 GLuint fboTexture;
 GLuint RBO;
 bool hasTexture = true;
-
+int currentEffect = 0;       // 0 = Normal, 1 = Inversion, 2 = Noir & Blanc, 3 = Flou
+int loc_postProcessEffect;   // Pour stocker l'uniform du shader
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
 GLShader g_PostProcessShader;
@@ -97,8 +98,6 @@ bool Initialise()
         DragonIndices, 
         sizeof(DragonIndices) / sizeof(uint16_t)
     );
-    /// Creating the world matrices for the 3D models
-    /// Look at tooltip to see what are the parameters of the function
     
 #pragma endregion
     // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());
@@ -221,6 +220,7 @@ bool Initialise()
         g_PostProcessShader.LoadVertexShader("postProcessVS.vs");
         g_PostProcessShader.LoadFragmentShader("postProcessFS.fs");
         g_PostProcessShader.Create();
+		loc_postProcessEffect = glGetUniformLocation(g_PostProcessShader.GetProgram(), "u_effect");
         
     }
 #pragma endregion
@@ -247,7 +247,9 @@ void Render()
     glBufferSubData(GL_UNIFORM_BUFFER, 0, 64, mainCam->GetViewMatrix());
     glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, mainCam->GetProjectionMatrix());
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
-    
+
+    /// Creating the world matrices for the 3D models
+    /// Look at tooltip to see what are the parameters of the function
     MakeTRSMatrix(
         mDragonPos[0], mDragonPos[1], mDragonPos[2], 
         0.5f, 0.f, 0.5f, 
@@ -290,7 +292,8 @@ void Render()
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, fboTexture);
     glUniform1i(glGetUniformLocation(g_PostProcessShader.GetProgram(), "screenTexture"), 0);
-    
+    glUniform1i(loc_postProcessEffect, currentEffect);
+
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -401,7 +404,6 @@ void Display(GLFWwindow* window)
         ImGui::Text("Adjust Kirby Scale : ");
         ImGui::SliderFloat("kirby_scale", &mKirbyScale, 0.1f, 5.0f);
     }
-
     if(ImGui::CollapsingHeader("Camera Settings"))
     {
         ImGui::Spacing();
@@ -420,7 +422,19 @@ void Display(GLFWwindow* window)
         if(ImGui::IsItemClicked())
             mainCam->Reset();
     }
+    
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Text("Post-Process Effects");
 
+	// Tableau contenant le nom de nos effets
+	const char* effects[] = { "Normal (Aucun)", "Inversion des couleurs", "Noir et Blanc", "Flou (Box Blur)" };
+
+	// Ce combo va modifier directement 'currentEffect' avec l'index de l'élément choisi (0, 1, 2 ou 3)
+	if (ImGui::Combo("Choix de l'effet", &currentEffect, effects, IM_ARRAYSIZE(effects)))
+	{
+	}
+	
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
