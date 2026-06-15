@@ -22,6 +22,12 @@ uniform u_Material u_mat ;
 uniform sampler2D m_sampler;
 uniform int u_hasTexture;
 
+layout(std140) uniform CameraData
+{
+    mat4 m_ViewMatrix;
+    mat4 m_Perspective;
+};
+
 vec3 diffuse(vec3 N, vec3 L, vec3 color,float Id)
 {
     float NL = max(dot(N, L), 0.0);
@@ -31,15 +37,11 @@ vec3 diffuse(vec3 N, vec3 L, vec3 color,float Id)
     return RGB;
 }
 
-vec3 specular(vec3 N, vec3 L, float Id )
+vec3 specular(vec3 N, vec3 L, vec3 V, float Id )
 {
     vec3 R = reflect(-L, N);
-    vec3 V = vec3(0.0) - normalize(v_Position);
-    float specularfactor = pow(max(dot(R,V),0.0),u_mat.shininess) * Id;
-
-    vec3 RGB = u_mat.specular * specularfactor;
-
-    return RGB;
+    float specfactor = pow(max(dot(R,V),0.0),u_mat.shininess) * Id;
+    return u_mat.specular * specfactor;
 }
 
 vec3 BP_specular(vec3 N, vec3 L, float Id )
@@ -66,12 +68,23 @@ void main(void) {
     vec3 N = normalize(v_Normal); // normale en repere monde 
     vec3 L = normalize(-LightDirection); // direction VERS la lumiere
     float Id = 1.0; // Intensite de la lumiere
+    // Calcul vecteur caméra
+    vec3 camPos = inverse(m_ViewMatrix)[3].xyz;
+    vec3 V = normalize(camPos - v_Position);
     // Calcul lumiere
     vec3 diffuseColor  = diffuse(N, L,colorTotal.rgb, Id );
-    vec3 specularColor = specular(N,L ,Id);
+    vec3 specularColor = specular(N, L, V, Id);
     //vec3 BPSpecularColor = BP_specular(N,L ,Id);
     //vec3 ambientColor = vec3(ambientIntensity) * colorTotal.rgb;
-    
+
+    // Effet Fresnel
+    float cosTheta = max(dot(N, V), 0.0); // angle regard vs surface
+    float R0 = 0.04; // réflectivité
+    float fresnel = R0 + (1.0 - R0) * pow(1.0 - cosTheta, 5.0);
+    // conversion
+    vec3 kS = vec3(fresnel);
+    vec3 kD = vec3(1.0) - kS;
+
     float NdotSky = dot(N,SkyVec);
     vec3 SkyColor = vec3(0.0,0.0,1.0);
     vec3 GroundColor = vec3(0.0,1.0,0.0);
@@ -79,6 +92,6 @@ void main(void) {
     float Hemispherefactor = NdotSky *0.5 +0.5;
     vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(SkyColor,GroundColor,Hemispherefactor);
     //Mix
-    vec3 PhongIllumination = ambiant + diffuseColor + specularColor;
+    vec3 PhongIllumination = ambiant + (diffuseColor * kD) + (specularColor * kS);
     FragColor = vec4(PhongIllumination, 1.0);
 }

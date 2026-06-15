@@ -54,6 +54,9 @@ int loc_postProcessEffect;   // Pour stocker l'uniform du shader
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
 GLShader g_PostProcessShader;
+GLuint skyboxVAO = 0;
+GLuint skyboxVBO = 0;
+GLuint skyboxTex = 0;
 
 
 float mWorldMatrixDragon[16];
@@ -65,6 +68,32 @@ float mKirbyScale  = 1.0f;
 
 GLfloat angleD = 0;
 #pragma endregion
+
+GLuint LoadSkybox(std::vector<std::string> faces) {
+    GLuint texID;
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
+    int w, h, count;
+    for(int i=0; i<faces.size(); i++) {
+        stbi_set_flip_vertically_on_load(false); 
+        unsigned char *data = stbi_load(faces[i].c_str(), &w, &h, &count, 0);
+        GLenum format;
+        if (count == 4) {
+            format = GL_RGBA;
+        } else {
+            GL_RGB;
+        }
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
+        stbi_image_free(data);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return texID;
+}
 
 bool Initialise() 
 { 
@@ -222,6 +251,52 @@ bool Initialise()
         
     }
 #pragma endregion
+
+#pragma region Config Skybox
+    {
+        float skyboxVertices[] = {
+            -1.0f,  1.0f, -1.0f,  -1.0f, -1.0f, -1.0f,   1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,   1.0f,  1.0f, -1.0f,  -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,  -1.0f, -1.0f, -1.0f,  -1.0f,  1.0f, -1.0f,
+            -1.0f,  1.0f, -1.0f,  -1.0f,  1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,
+             1.0f, -1.0f, -1.0f,   1.0f, -1.0f,  1.0f,   1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,   1.0f,  1.0f, -1.0f,   1.0f, -1.0f, -1.0f,
+            -1.0f, -1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,   1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,   1.0f, -1.0f,  1.0f,  -1.0f, -1.0f,  1.0f,
+            -1.0f,  1.0f, -1.0f,   1.0f,  1.0f, -1.0f,   1.0f,  1.0f,  1.0f,
+             1.0f,  1.0f,  1.0f,  -1.0f,  1.0f,  1.0f,  -1.0f,  1.0f, -1.0f,
+            -1.0f, -1.0f, -1.0f,  -1.0f, -1.0f,  1.0f,   1.0f, -1.0f, -1.0f,
+             1.0f, -1.0f, -1.0f,  -1.0f, -1.0f,  1.0f,   1.0f, -1.0f,  1.0f
+        };
+
+        glGenVertexArrays(1, &skyboxVAO);
+        glGenBuffers(1, &skyboxVBO);
+        glBindVertexArray(skyboxVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glBindVertexArray(0);
+        g_SkyboxShader.LoadVertexShader("skyboxVS.vs");
+        g_SkyboxShader.LoadFragmentShader("skyboxFS.fs");
+        g_SkyboxShader.Create();
+
+        GLuint blockIdx = glGetUniformBlockIndex(g_SkyboxShader.GetProgram(), "CameraData");
+        if(blockIdx != GL_INVALID_INDEX) {
+            glUniformBlockBinding(g_SkyboxShader.GetProgram(), blockIdx, 0);
+        }
+
+        std::vector<std::string> faces = {
+            "envmaps/right.png",
+            "envmaps/left.png",
+            "envmaps/top.png",
+            "envmaps/bottom.png",
+            "envmaps/front.png",
+            "envmaps/back.png"
+        };
+        skyboxTex = LoadSkybox(faces);
+    }
+#pragma endregion
     
 #ifdef WIN32 
     wglSwapIntervalEXT(1); 
@@ -280,6 +355,17 @@ void Render()
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixDragon);
         modelDragon->Draw();
     }
+    // Dessin Skybox
+    glDepthFunc(GL_LEQUAL); 
+    glUseProgram(g_SkyboxShader.GetProgram());
+    glBindVertexArray(skyboxVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+    glUniform1i(glGetUniformLocation(g_SkyboxShader.GetProgram(), "skybox"), 0);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+    glDepthFunc(GL_LESS);
+
     // Lecture du FBO et affichage sur l'écran
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
@@ -465,6 +551,10 @@ void Terminate() {
     glDeleteVertexArrays(1, &quadVAO);
     glDeleteBuffers(1, &quadVBO);
     g_PostProcessShader.Destroy();
+    glDeleteVertexArrays(1, &skyboxVAO);
+    glDeleteBuffers(1, &skyboxVBO);
+    glDeleteTextures(1, &skyboxTex);
+    g_SkyboxShader.Destroy();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
