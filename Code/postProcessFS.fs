@@ -27,6 +27,42 @@ vec3 blur(vec3 col) {
     col = blurCol / 9.0; // Average the colors
     return col;
 }
+vec3 sepia(vec3 col) {
+    vec3 sepia = {
+        dot(col, vec3(0.4, 0.7, 0.2)),
+        dot(col, vec3(0.3, 0.7, 0.2)),
+        dot(col, vec3(0.3, 0.5, 0.1))
+    };
+    col = sepia; // Sépia
+    return col;
+}
+vec3 convolutionKernel(vec3col)
+{
+    ivec2 texSize = textureSize(screenTexture, 0);
+    vec2 texOffset = vec2(1/float(texSize.x), 1/float(texSize.y));
+    vec2 offsets[9] = vec2[](
+        vec2(-texOffset.x, texOffset.y),
+        vec2(0.0, texOffset.y),
+        vec2(texOffset.x, texOffset.y),
+        vec2(-texOffset.x, 0.0),
+        vec2(0.0, 0.0),
+        vec2(texOffset.x, 0.0),
+        vec2(-texOffset.x, -texOffset.y),
+        vec2(0.0, -texOffset.y),
+        vec2(texOffset.x, -texOffset.y)
+    );
+    float kernel[9] = float[](-1, -1, -1, -1, 8, -1, -1, -1, -1);
+    vec3 kCol = vec3(0);
+    for(int i=0; i<9; i++) {
+        vec3 tex = texture(screenTexture, TexCoords + offsets[i]).rgb;
+        kCol += tex * kernel[i];
+    }
+    col = kCol; // noyau de convolution
+    return col;
+} 
+
+
+
 
 void main() {
     vec3 col = texture(screenTexture, TexCoords).rgb;
@@ -39,8 +75,13 @@ void main() {
             col = NoirEtBlanc(col);
             break;
         case 3: // Flou (Blur)
-            
             col = blur(col); // Average the colors
+            break;
+        case 4: //sepia
+            col = sepia(col); // Sépia
+            break;
+        case 5: // convolution kernel
+            col = convolutionKernel(col); // noyau de convolution
             break;
         default:
             break; // Normal
