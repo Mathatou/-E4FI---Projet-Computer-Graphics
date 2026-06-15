@@ -27,15 +27,18 @@ Model* modelDragon = nullptr;
 #pragma endregion
 
 
-Camera* mainCam = nullptr;
-GLuint uboCamera = 0;
 
 
 #pragma region Def des variables globales
-GLShader g_BasicShader; 
-GLuint texID_dragon;
 const int WIN_W = 960*2;
 const int WIN_H = 540*2;
+
+GLuint uboCamera = 0;
+Camera* mainCam = nullptr;
+float limitTheta = ((float)M_PI / 2.0f) - 0.01f; 
+GLShader g_BasicShader; 
+
+GLuint texID_dragon;
 int loc_rotationy;
 int loc_translate; 
 int loc_diffuse;
@@ -56,6 +59,10 @@ GLShader g_PostProcessShader;
 
 float mWorldMatrixDragon[16];
 float mWorldMatrixKirby[16];
+float mDragonPos[3] = {0.f, 0.f, 0.f};
+float mKirbyPos[3] = {0.f, 0.f, 0.f};
+float mDragonScale = 1.0f;
+float mKirbyScale  = 1.0f;
 
 GLfloat angleD = 0;
 #pragma endregion
@@ -92,15 +99,7 @@ bool Initialise()
     );
     /// Creating the world matrices for the 3D models
     /// Look at tooltip to see what are the parameters of the function
-    MakeTRSMatrix(
-        0.f, 0.f, 0.f, 
-        0.5f, 0.f, 0.5f, 
-        1.0f, mWorldMatrixDragon);
-    MakeTRSMatrix(
-        0.f, -15.f, 0.f, 
-        -1.5f, 0.f, 0.5f, 
-        1.0f, mWorldMatrixKirby);
-
+    
 #pragma endregion
     // glUniformMatrix4fv(glGetUniformLocation(g_BasicShader.GetProgram(),"m_Perspective"),1,GL_FALSE,mainCam->GetProjectionMatrix());
     glClearColor(0.5f, 0.5f, 0.5f, 1.f); 
@@ -148,7 +147,6 @@ bool Initialise()
             loc_shininess = glGetUniformLocation(basicProgram,"u_mat.shininess");
             
             // Envoi des datas
-            // glUniformMatrix4fv(loc_persp,1,GL_FALSE,mainCam->GetProjectionMatrix());
             glUniform1i(loc_sampler,0);    
         }
     }
@@ -250,6 +248,15 @@ void Render()
     glBufferSubData(GL_UNIFORM_BUFFER, 64, 64, mainCam->GetProjectionMatrix());
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
     
+    MakeTRSMatrix(
+        mDragonPos[0], mDragonPos[1], mDragonPos[2], 
+        0.5f, 0.f, 0.5f, 
+        mDragonScale, mWorldMatrixDragon);
+    MakeTRSMatrix(
+        mKirbyPos[0], mKirbyPos[1], mKirbyPos[2], 
+        -1.5f, 0.f, 0.5f, 
+        mKirbyScale, mWorldMatrixKirby);
+
     //Dessin Kirby
     if(modelKirby)
     {
@@ -293,6 +300,7 @@ void Render()
 void Display(GLFWwindow* window)
 {
     Render();
+#pragma region ImGui
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -371,10 +379,52 @@ void Display(GLFWwindow* window)
         ImGui::SliderFloat("dragon_specular2", &modelDragon->material.specular[2], 0.0f, 1.0f);
         ImGui::Spacing();
     }
+    if(ImGui::CollapsingHeader("Dragon Position and Scale"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Dragon Position : ");
+        ImGui::SliderFloat("dragon_pos_x", &mDragonPos[0], -10.0f, 10.0f);
+        ImGui::SliderFloat("dragon_pos_y", &mDragonPos[1], -10.0f, 10.0f);
+        ImGui::SliderFloat("dragon_pos_z", &mDragonPos[2], -10.0f, 10.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Dragon Scale : ");
+        ImGui::SliderFloat("dragon_scale", &mDragonScale, 0.1f, 5.0f);
+    }
+    if(ImGui::CollapsingHeader("Kirby Position and Scale"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Position : ");
+        ImGui::SliderFloat("kirby_pos_x", &mKirbyPos[0], -10.0f, 10.0f);
+        ImGui::SliderFloat("kirby_pos_y", &mKirbyPos[1], -10.0f, 10.0f);
+        ImGui::SliderFloat("kirby_pos_z", &mKirbyPos[2], -10.0f, 10.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Scale : ");
+        ImGui::SliderFloat("kirby_scale", &mKirbyScale, 0.1f, 5.0f);
+    }
+
+    if(ImGui::CollapsingHeader("Camera Settings"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Camera Radius : ");
+        ImGui::SliderFloat("camera_radius", &mainCam->radius, 1.0f, 100.0f);
+        ImGui::Text("Adjust Camera Theta : ");
+        ImGui::SliderFloat("camera_theta", &mainCam->theta, -3.14f, 3.14f);
+        ImGui::Spacing();
+        if (mainCam->theta > limitTheta) mainCam->theta = limitTheta;
+        if (mainCam->theta < -limitTheta) mainCam->theta = -limitTheta;
+        ImGui::Spacing();
+        ImGui::Text("Adjust Camera Phi : ");
+        ImGui::SliderFloat("camera_phi", &mainCam->phi, -1.57f, 1.57f);
+        ImGui::Spacing();
+        ImGui::Button("Reset Camera");
+        if(ImGui::IsItemClicked())
+            mainCam->Reset();
+    }
 
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#pragma endregion
     glfwSwapBuffers(window);
     glfwPollEvents();
 }
@@ -395,6 +445,7 @@ void Terminate() {
 
 void scroll_callback(GLFWwindow* window, double xpos, double yOffset)
 {
+    if(ImGui::GetIO().WantCaptureMouse) return; // Ignore mouse events if ImGui wants to capture them
     if(mainCam) mainCam->OnScroll(yOffset);
 }
 
