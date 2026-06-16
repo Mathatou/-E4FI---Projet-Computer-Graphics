@@ -21,6 +21,9 @@ struct u_Material
 uniform u_Material u_mat ;
 uniform sampler2D m_sampler;
 uniform int u_hasTexture;
+uniform int u_reflectivityPreset; // 0 = Or, 1 = Eau, 2 = Argent
+uniform vec3 u_Reflectivity = vec3(0.04, 0.04, 0.04); // Réflectivité par défaut pour les matériaux non métalliques
+
 
 layout(std140) uniform CameraData
 {
@@ -79,11 +82,28 @@ void main(void) {
 
     // Effet Fresnel
     float cosTheta = max(dot(N, V), 0.0); // angle regard vs surface
-    float R0 = 0.04; // réflectivité
-    float fresnel = R0 + (1.0 - R0) * pow(1.0 - cosTheta, 5.0);
+    vec3 reflectivity; // réflectivité de la surface
+    switch(u_reflectivityPreset) 
+    {
+        case 0: // Or
+            reflectivity = vec3(1.0, 0.71, 0.29);
+            break;
+        case 1: // Eau
+            reflectivity = vec3(0.02, 0.04, 0.08);
+            break;
+        case 2: // Argent
+            reflectivity = vec3(0.91, 0.92, 0.92);
+            break;
+        case 3: // Bronze
+            reflectivity = vec3(0.8, 0.5, 0.2);
+            break;
+        default:
+            reflectivity = u_Reflectivity; // Utiliser la valeur par défaut si aucun preset n'est sélectionné
+            break;
+    }
+    vec3 fresnelColor = reflectivity + (vec3(1.0) - reflectivity) * pow(1.0 - cosTheta, 5.0);
     // conversion
-    vec3 kS = vec3(fresnel);
-    vec3 kD = vec3(1.0) - kS;
+    vec3 kD = vec3(1.0) - fresnelColor;
 
     float NdotSky = dot(N,SkyVec);
     vec3 SkyColor = vec3(0.0,0.0,1.0);
@@ -92,6 +112,6 @@ void main(void) {
     float Hemispherefactor = NdotSky *0.5 +0.5;
     vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(SkyColor,GroundColor,Hemispherefactor);
     //Mix
-    vec3 PhongIllumination = ambiant + (diffuseColor * kD) + (specularColor * kS);
+    vec3 PhongIllumination = ambiant + (diffuseColor * kD) + (specularColor * fresnelColor);
     FragColor = vec4(PhongIllumination, 1.0);
 }
