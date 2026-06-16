@@ -1,6 +1,6 @@
 #include "Model.hpp"
 #include "libs/stb-master/tiny_obj_loader.h"
-
+#include "libs/stb-master/stb_image.h" 
 
 Model::Model() : VAO(0), VBO(0), IBO(0), indexCount(0), indexType(GL_UNSIGNED_INT) {}
 
@@ -8,6 +8,9 @@ Model::~Model() {
     if (VBO) glDeleteBuffers(1, &VBO);
     if (IBO) glDeleteBuffers(1, &IBO);
     if (VAO) glDeleteVertexArrays(1, &VAO);
+    if (material.hasTexture ) {
+        glDeleteTextures(1, &this->material.diffuseTexture);
+    }
 }
 
 /// @brief Load a 3D model from an OBJ file using TinyObjLoader.
@@ -48,6 +51,40 @@ bool Model::Load(const std::string& filename)
             material.specular[i] = mat.specular[i];
         }
         material.shininess = mat.shininess;
+
+        std::cout << "Material loaded: " << mat.name << std::endl;
+        std::cout << "materials[0].diffuse_texname: " << materials[0].diffuse_texname << std::endl;
+        
+        // --- NOUVEAU : Chargement de la texture diffuse ---
+        // On vérifie si le .mtl spécifie une image pour la couleur diffuse
+        if (!materials[0].diffuse_texname.empty()) {
+            // Le chemin de l'image est le dossier de l'OBJ + le nom de l'image
+            std::string texPath = basedir + materials[0].diffuse_texname;
+            
+            glGenTextures(1, &material.diffuseTexture);
+            glBindTexture(GL_TEXTURE_2D, material.diffuseTexture);
+            
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            
+            // Souvent nécessaire car OpenGL lit les images à l'envers (de bas en haut)
+            stbi_set_flip_vertically_on_load(true);
+            
+            int w, h, channels;
+            // On force 4 canaux (RGBA) pour éviter les crashs si l'image n'a pas d'alpha
+            unsigned char* data = stbi_load(texPath.c_str(), &w, &h, &channels, 4); 
+            std::cout << "Chargement de la texture : " << texPath << std::endl;
+            if (data) {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+                glGenerateMipmap(GL_TEXTURE_2D); // Génère les mipmaps pour la netteté de loin
+                material.hasTexture = true;
+                stbi_image_free(data);
+                std::cout << "Texture chargee avec succes : " << texPath << std::endl;
+            } else {
+                material.hasTexture = false;
+            }
+        }
+        std::cout << "Load success" << std::endl;
     }
 
     std::vector<Vertex> vertices;
