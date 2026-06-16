@@ -24,6 +24,7 @@ GLFWwindow* window;
 #pragma region Les modeles 3D affichés
 Model* modelKirby  = nullptr;
 Model* modelDragon = nullptr;
+Model* modelMiles = nullptr;
 #pragma endregion
 
 #pragma region Def des variables globales
@@ -63,10 +64,14 @@ GLuint skyboxTex = 0;
 
 float mWorldMatrixDragon[16];
 float mWorldMatrixKirby[16];
+float mWorldMatrixMiles[16];
 float mDragonPos[3] = {0.f, 0.f, 0.f};
 float mKirbyPos[3] = {0.f, 0.f, 0.f};
+float mMilesPos[3] = {0.f, 0.f, 0.f};
 float mDragonScale = 1.0f;
 float mKirbyScale  = 1.0f;
+float mMilesScale  = 1.0f;
+
 
 #pragma endregion
 
@@ -116,11 +121,13 @@ bool Initialise()
     // Loading 3D models and the cam
     modelKirby = new Model();
     modelDragon = new Model();
+    modelMiles = new Model();
     mainCam = new Camera(WIN_W, WIN_H);
     // Loading the models from OBJs and .h file
     modelKirby->Load("../2_OBJs/kirby.obj");
+    modelMiles->Load("../2_OBJs/MilesMorales.obj");
     modelDragon->LoadFromData
-    (
+    (   
         DragonVertices, 
         sizeof(DragonVertices) / sizeof(float), 
         DragonIndices, 
@@ -333,17 +340,44 @@ void Render()
         mKirbyPos[0], mKirbyPos[1], mKirbyPos[2], 
         -1.5f, 0.f, 0.5f, 
         mKirbyScale, mWorldMatrixKirby);
+    MakeTRSMatrix(
+        mMilesPos[0], mMilesPos[1], mMilesPos[2], 
+        0.f, 0.f, 0.f, 
+        mMilesScale, mWorldMatrixMiles);
 
     //Dessin Kirby
     if(modelKirby)
     {
-        glUniform1i(loc_hasTexture, 0);
+        if (modelKirby->material.hasTexture) {
+            glUniform1i(loc_hasTexture, 1);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, modelKirby->material.diffuseTexture);
+        } 
+        else {
+            glUniform1i(loc_hasTexture, 0); 
+        }
         glUniform3fv(loc_diffuse, 1, modelKirby->material.diffuse);
         glUniform3fv(loc_specular, 1, modelKirby->material.specular);
         glUniform1f(loc_shininess, modelKirby->material.shininess);
-        glUniform1i(loc_hasTexture, 0);
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixKirby);
         modelKirby->Draw();
+    }
+    // Dessin Miles
+    if(modelMiles)
+    {
+        if (modelMiles->material.hasTexture) {
+            glUniform1i(loc_hasTexture, 1);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, modelMiles->material.diffuseTexture);
+        } 
+        else {
+            glUniform1i(loc_hasTexture, 0); 
+        }
+        glUniform3fv(loc_diffuse, 1, modelMiles->material.diffuse);
+        glUniform3fv(loc_specular, 1, modelMiles->material.specular);
+        glUniform1f(loc_shininess, modelMiles->material.shininess);
+        glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixMiles);
+        modelMiles->Draw();
     }
     // Dessin Dragon
     if(modelDragon)
@@ -442,6 +476,17 @@ void Display(GLFWwindow* window)
         ImGui::Spacing();
         
     }
+    if(ImGui::CollapsingHeader("Kirby Position and Scale"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Position : ");
+        ImGui::SliderFloat("kirby_pos_x", &mKirbyPos[0], -10.0f, 10.0f);
+        ImGui::SliderFloat("kirby_pos_y", &mKirbyPos[1], -10.0f, 10.0f);
+        ImGui::SliderFloat("kirby_pos_z", &mKirbyPos[2], -10.0f, 10.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Kirby Scale : ");
+        ImGui::SliderFloat("kirby_scale", &mKirbyScale, 0.1f, 5.0f);
+    }
     if(ImGui::CollapsingHeader("Dragon Material Settings"))
     {
         ImGui::Spacing();
@@ -478,17 +523,41 @@ void Display(GLFWwindow* window)
         ImGui::Text("Adjust Dragon Scale : ");
         ImGui::SliderFloat("dragon_scale", &mDragonScale, 0.1f, 5.0f);
     }
-    if(ImGui::CollapsingHeader("Kirby Position and Scale"))
+    if(ImGui::CollapsingHeader("Miles Material Settings"))
     {
         ImGui::Spacing();
-        ImGui::Text("Adjust Kirby Position : ");
-        ImGui::SliderFloat("kirby_pos_x", &mKirbyPos[0], -10.0f, 10.0f);
-        ImGui::SliderFloat("kirby_pos_y", &mKirbyPos[1], -10.0f, 10.0f);
-        ImGui::SliderFloat("kirby_pos_z", &mKirbyPos[2], -10.0f, 10.0f);
+        ImGui::Text("Ambient : ");
+        ImGui::SliderFloat("Miles_ambient0", &modelMiles->material.ambient[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_ambient1", &modelMiles->material.ambient[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_ambient2", &modelMiles->material.ambient[2], 0.0f, 1.0f);
         ImGui::Spacing();
-        ImGui::Text("Adjust Kirby Scale : ");
-        ImGui::SliderFloat("kirby_scale", &mKirbyScale, 0.1f, 5.0f);
+        ImGui::Text("Adjust Miles Color : ");
+        ImGui::SliderFloat("Miles_diffuse0", &modelMiles->material.diffuse[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_diffuse1", &modelMiles->material.diffuse[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_diffuse2", &modelMiles->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Miles Shininess : ");
+        ImGui::SliderFloat("Miles_shininess", &modelMiles->material.shininess, 1.0f, 128.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Miles Specular : ");
+        ImGui::SliderFloat("Miles_specular0", &modelMiles->material.specular[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_specular1", &modelMiles->material.specular[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Miles_specular2", &modelMiles->material.specular[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        
     }
+    if(ImGui::CollapsingHeader("Miles Position and Scale"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Miles Position : ");
+        ImGui::SliderFloat("Miles_pos_x", &mMilesPos[0], -10.0f, 10.0f);
+        ImGui::SliderFloat("Miles_pos_y", &mMilesPos[1], -10.0f, 10.0f);
+        ImGui::SliderFloat("Miles_pos_z", &mMilesPos[2], -10.0f, 10.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Miles Scale : ");
+        ImGui::SliderFloat("Miles_scale", &mMilesScale, 0.1f, 5.0f);
+    }
+    
     if(ImGui::CollapsingHeader("Camera Settings"))
     {
         ImGui::Spacing();
