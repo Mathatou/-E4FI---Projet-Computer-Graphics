@@ -54,6 +54,7 @@ int loc_postProcessEffect;   // Pour stocker l'uniform du shader
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
 GLShader g_PostProcessShader;
+GLShader g_SkyboxShader;
 GLuint skyboxVAO = 0;
 GLuint skyboxVBO = 0;
 GLuint skyboxTex = 0;
