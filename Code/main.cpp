@@ -48,8 +48,9 @@ GLuint FBO;
 GLuint fboTexture;
 GLuint RBO;
 bool hasTexture = true;
-bool useWireframe = false;
 int currentEffect = 0;       // 0 = Normal, 1 = Inversion, 2 = Noir & Blanc, 3 = Flou
+int loc_reflectivityPreset; // Pour stocker l'uniform du shader
+int currentReflectivityPreset = 0; // 0 = Or, 1 = Eau, 2 = Argent
 int loc_postProcessEffect;   // Pour stocker l'uniform du shader
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
@@ -67,7 +68,6 @@ float mKirbyPos[3] = {0.f, 0.f, 0.f};
 float mDragonScale = 1.0f;
 float mKirbyScale  = 1.0f;
 
-GLfloat angleD = 0;
 #pragma endregion
 
 GLuint LoadSkybox(std::vector<std::string> faces) {
@@ -82,7 +82,7 @@ GLuint LoadSkybox(std::vector<std::string> faces) {
         if (count == 4) {
             format = GL_RGBA;
         } else {
-            GL_RGB;
+            format = GL_RGB;
         }
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, data);
         stbi_image_free(data);
@@ -172,7 +172,7 @@ bool Initialise()
             loc_diffuse = glGetUniformLocation(basicProgram,"u_mat.diffuse");
             loc_specular = glGetUniformLocation(basicProgram,"u_mat.specular");
             loc_shininess = glGetUniformLocation(basicProgram,"u_mat.shininess");
-            
+            loc_reflectivityPreset = glGetUniformLocation(basicProgram,"u_reflectivityPreset");
             // Envoi des datas
             glUniform1i(loc_sampler,0);    
         }
@@ -315,6 +315,7 @@ void Render()
     glEnable(GL_DEPTH_TEST);
 
     glUseProgram(g_BasicShader.GetProgram());
+    glUniform1i(loc_reflectivityPreset, currentReflectivityPreset);
     mainCam->Update();
     
     glBindBuffer(GL_UNIFORM_BUFFER, uboCamera);
@@ -378,7 +379,6 @@ void Render()
     glBindTexture(GL_TEXTURE_2D, fboTexture);
     glUniform1i(glGetUniformLocation(g_PostProcessShader.GetProgram(), "screenTexture"), 0);
     glUniform1i(loc_postProcessEffect, currentEffect);
-
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -533,8 +533,20 @@ void Display(GLFWwindow* window)
 		{
 		}
 	}
-	
-
+    // Reflectivity
+    {
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Text("Valeurs de reflectivité");
+        const char* materials[] = { "Or", "Eau", "Argent", "Bronze", "Par Défaut" };
+        
+        // ImGui::Combo modifie currentReflectivityPreset de 0 à 4
+        if (ImGui::Combo("Preset Matériau", &currentReflectivityPreset, materials, IM_ARRAYSIZE(materials)))
+        {
+            // La mise à jour se fera automatiquement à la frame suivante dans Render()
+        }        
+    }
+    
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
