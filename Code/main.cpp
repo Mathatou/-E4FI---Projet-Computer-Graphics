@@ -623,6 +623,7 @@ void Display(GLFWwindow* window)
 void Terminate() { 
     delete modelKirby;
     delete modelDragon;
+    delete modelMiles;
     delete mainCam;
     glDeleteBuffers(1, &uboCamera);
     glDeleteTextures(1,&texID_dragon);
