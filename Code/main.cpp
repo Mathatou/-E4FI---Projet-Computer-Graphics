@@ -523,7 +523,6 @@ void Display(GLFWwindow* window)
 			"Flou (Box Blur)",
 			"Sepia",
 			"Noyau de Convolution",
-            "Vignettage",
             "Aberration Chromatique",
             "Pixellisation"
 		};
@@ -543,10 +542,8 @@ void Display(GLFWwindow* window)
         // ImGui::Combo modifie currentReflectivityPreset de 0 à 4
         if (ImGui::Combo("Preset Matériau", &currentReflectivityPreset, materials, IM_ARRAYSIZE(materials)))
         {
-            // La mise à jour se fera automatiquement à la frame suivante dans Render()
         }        
     }
-    
     // Rendering
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -103,13 +103,10 @@ void main() {
         case 5: // convolution kernel
             col = convolutionKernel(col); // noyau de convolution
             break;
-        case 6: // Vignettage
-            col = vignettage(col);
-            break;
-        case 7: // Aberration chromatique
+        case 6: // Aberration chromatique
             col = aberrationChromatique(col);
             break;
-        case 8: // Pixellisation
+        case 7: // Pixellisation
             col = pixellisation(col);
             break;
         default:
