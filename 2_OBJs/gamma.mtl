@@ -1,0 +1,10 @@
+# Blender 4.3.2 MTL File: 'RIG - Gamma_1.0.blend'
+# www.blender.org
+
+newmtl MAT_-_Gamma01
+Ka 0.500000 0.500000 0.500000
+Kd 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ni 1.000000
+illum 3
+map_Kd                ch_gamma_dif_ACEScg.png
