@@ -25,6 +25,7 @@ GLFWwindow* window;
 Model* modelKirby  = nullptr;
 Model* modelDragon = nullptr;
 Model* modelMiles = nullptr;
+Model* modelGamma = nullptr;
 #pragma endregion
 
 #pragma region Def des variables globales
@@ -65,13 +66,15 @@ GLuint skyboxTex = 0;
 float mWorldMatrixDragon[16];
 float mWorldMatrixKirby[16];
 float mWorldMatrixMiles[16];
+float mWorldMatrixGamma[16];
 float mDragonPos[3] = {0.f, 0.f, 0.f};
 float mKirbyPos[3] = {0.f, 0.f, 0.f};
 float mMilesPos[3] = {-8.f, 0.f, -5.f};
+float mGammaPos[3] = {8.f, 0.f, -5.f};
 float mDragonScale = 1.0f;
 float mKirbyScale  = 1.0f;
 float mMilesScale  = 1.0f;
-
+float mGammaScale  = 1.0f;
 
 #pragma endregion
 
@@ -122,10 +125,12 @@ bool Initialise()
     modelKirby = new Model();
     modelDragon = new Model();
     modelMiles = new Model();
+    modelGamma = new Model();
     mainCam = new Camera(WIN_W, WIN_H);
     // Loading the models from OBJs and .h file
     modelKirby->Load("../2_OBJs/kirby.obj");
     modelMiles->Load("../2_OBJs/MilesMorales.obj");
+    modelGamma->Load("../2_OBJs/gamma.obj");
     modelDragon->LoadFromData
     (   
         DragonVertices, 
@@ -344,6 +349,10 @@ void Render()
         mMilesPos[0], mMilesPos[1], mMilesPos[2], 
         0.f, 0.f, 0.f, 
         mMilesScale, mWorldMatrixMiles);
+    MakeTRSMatrix(
+        mGammaPos[0], mGammaPos[1], mGammaPos[2], 
+        0.f, 0.f, 0.f, 
+        mGammaScale, mWorldMatrixGamma);
 
     //Dessin Kirby
     if(modelKirby)
@@ -378,6 +387,23 @@ void Render()
         glUniform1f(loc_shininess, modelMiles->material.shininess);
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixMiles);
         modelMiles->Draw();
+    }
+    // Dessin Gamma
+    if(modelGamma)
+    {
+        if (modelGamma->material.hasTexture) {
+            glUniform1i(loc_hasTexture, 1);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, modelGamma->material.diffuseTexture);
+        } 
+        else {
+            glUniform1i(loc_hasTexture, 0); 
+        }
+        glUniform3fv(loc_diffuse, 1, modelGamma->material.diffuse);
+        glUniform3fv(loc_specular, 1, modelGamma->material.specular);
+        glUniform1f(loc_shininess, modelGamma->material.shininess);
+        glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixGamma);
+        modelGamma->Draw();
     }
     // Dessin Dragon
     if(modelDragon)
@@ -557,6 +583,40 @@ void Display(GLFWwindow* window)
         ImGui::Text("Adjust Miles Scale : ");
         ImGui::SliderFloat("Miles_scale", &mMilesScale, 0.1f, 5.0f);
     }
+    if(ImGui::CollapsingHeader("Gamma Material Settings"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Ambient : ");
+        ImGui::SliderFloat("Gamma_ambient0", &modelGamma->material.ambient[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_ambient1", &modelGamma->material.ambient[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_ambient2", &modelGamma->material.ambient[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Gamma Color : ");
+        ImGui::SliderFloat("Gamma_diffuse0", &modelGamma->material.diffuse[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_diffuse1", &modelGamma->material.diffuse[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_diffuse2", &modelGamma->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Gamma Shininess : ");
+        ImGui::SliderFloat("Gamma_shininess", &modelGamma->material.shininess, 1.0f, 128.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Gamma Specular : ");
+        ImGui::SliderFloat("Gamma_specular0", &modelGamma->material.specular[0], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_specular1", &modelGamma->material.specular[1], 0.0f, 1.0f);
+        ImGui::SliderFloat("Gamma_specular2", &modelGamma->material.specular[2], 0.0f, 1.0f);
+        ImGui::Spacing();
+        
+    }
+    if(ImGui::CollapsingHeader("Gamma Position and Scale"))
+    {
+        ImGui::Spacing();
+        ImGui::Text("Adjust Gamma Position : ");
+        ImGui::SliderFloat("Gamma_pos_x", &mGammaPos[0], -10.0f, 10.0f);
+        ImGui::SliderFloat("Gamma_pos_y", &mGammaPos[1], -10.0f, 10.0f);
+        ImGui::SliderFloat("Gamma_pos_z", &mGammaPos[2], -10.0f, 10.0f);
+        ImGui::Spacing();
+        ImGui::Text("Adjust Gamma Scale : ");
+        ImGui::SliderFloat("Gamma_scale", &mGammaScale, 0.1f, 5.0f);
+    }
     
     if(ImGui::CollapsingHeader("Camera Settings"))
     {
@@ -606,7 +666,7 @@ void Display(GLFWwindow* window)
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Text("Valeurs de reflectivité");
-        const char* materials[] = { "Or", "Eau", "Argent", "Bronze", "Par Défaut" };
+        const char* materials[] = { "Par Défaut","Or", "Eau", "Argent", "Bronze" };
         
         // ImGui::Combo modifie currentReflectivityPreset de 0 à 4
         if (ImGui::Combo("Preset Matériau", &currentReflectivityPreset, materials, IM_ARRAYSIZE(materials)))

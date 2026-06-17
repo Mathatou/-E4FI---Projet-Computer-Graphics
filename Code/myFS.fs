@@ -85,16 +85,16 @@ void main(void) {
     vec3 reflectivity; // réflectivité de la surface
     switch(u_reflectivityPreset) 
     {
-        case 0: // Or
+        case 1: // Or
             reflectivity = vec3(1.0, 0.71, 0.29);
             break;
-        case 1: // Eau
+        case 2: // Eau
             reflectivity = vec3(0.02, 0.04, 0.08);
             break;
-        case 2: // Argent
+        case 3: // Argent
             reflectivity = vec3(0.91, 0.92, 0.92);
             break;
-        case 3: // Bronze
+        case 4: // Bronze
             reflectivity = vec3(0.8, 0.5, 0.2);
             break;
         default:
