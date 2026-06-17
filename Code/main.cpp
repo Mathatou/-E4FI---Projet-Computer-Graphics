@@ -67,7 +67,7 @@ float mWorldMatrixKirby[16];
 float mWorldMatrixMiles[16];
 float mDragonPos[3] = {0.f, 0.f, 0.f};
 float mKirbyPos[3] = {0.f, 0.f, 0.f};
-float mMilesPos[3] = {0.f, 0.f, 0.f};
+float mMilesPos[3] = {-8.f, 0.f, -5.f};
 float mDragonScale = 1.0f;
 float mKirbyScale  = 1.0f;
 float mMilesScale  = 1.0f;
