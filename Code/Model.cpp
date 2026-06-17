@@ -81,10 +81,11 @@ bool Model::Load(const std::string& filename)
                 stbi_image_free(data);
                 std::cout << "Texture chargee avec succes : " << texPath << std::endl;
             } else {
+                std::cerr << "Erreur lors du chargement de la texture : " << texPath << std::endl;
+                stbi_image_free(data);
                 material.hasTexture = false;
             }
         }
-        std::cout << "Load success" << std::endl;
     }
 
     std::vector<Vertex> vertices;

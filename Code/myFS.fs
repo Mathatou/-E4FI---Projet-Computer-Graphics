@@ -110,7 +110,7 @@ void main(void) {
     vec3 GroundColor = vec3(0.0,1.0,0.0);
 
     float Hemispherefactor = NdotSky *0.5 +0.5;
-    vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(SkyColor,GroundColor,Hemispherefactor);
+    vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(GroundColor,SkyColor,Hemispherefactor);
     //Mix
     vec3 PhongIllumination = ambiant + (diffuseColor * kD) + (specularColor * fresnelColor);
     FragColor = vec4(PhongIllumination, 1.0);
