@@ -40,6 +40,7 @@ GLShader g_BasicShader;
 GLuint texID_dragon;
 int loc_rotationy;
 int loc_translate; 
+int loc_ambient;
 int loc_diffuse;
 int loc_specular;
 int loc_shininess;
@@ -68,7 +69,7 @@ float mWorldMatrixKirby[16];
 float mWorldMatrixMiles[16];
 float mWorldMatrixGamma[16];
 float mDragonPos[3] = {0.f, 0.f, 0.f};
-float mKirbyPos[3] = {0.f, 0.f, 0.f};
+float mKirbyPos[3] = {0.f, 5.f, 0.f};
 float mMilesPos[3] = {-8.f, 0.f, -5.f};
 float mGammaPos[3] = {8.f, 0.f, -5.f};
 float mDragonScale = 1.0f;
@@ -181,6 +182,7 @@ bool Initialise()
             loc_world = glGetUniformLocation(basicProgram,"m_WorldMatrix");
             loc_view = glGetUniformLocation(basicProgram,"m_ViewMatrix");            
             loc_hasTexture = glGetUniformLocation(basicProgram,"u_hasTexture");
+            loc_ambient = glGetUniformLocation(basicProgram,"u_mat.ambient");
             loc_diffuse = glGetUniformLocation(basicProgram,"u_mat.diffuse");
             loc_specular = glGetUniformLocation(basicProgram,"u_mat.specular");
             loc_shininess = glGetUniformLocation(basicProgram,"u_mat.shininess");
@@ -365,6 +367,7 @@ void Render()
         else {
             glUniform1i(loc_hasTexture, 0); 
         }
+        glUniform3fv(loc_ambient, 1, modelKirby->material.ambient);
         glUniform3fv(loc_diffuse, 1, modelKirby->material.diffuse);
         glUniform3fv(loc_specular, 1, modelKirby->material.specular);
         glUniform1f(loc_shininess, modelKirby->material.shininess);
@@ -382,6 +385,7 @@ void Render()
         else {
             glUniform1i(loc_hasTexture, 0); 
         }
+        glUniform3fv(loc_ambient, 1, modelMiles->material.ambient);
         glUniform3fv(loc_diffuse, 1, modelMiles->material.diffuse);
         glUniform3fv(loc_specular, 1, modelMiles->material.specular);
         glUniform1f(loc_shininess, modelMiles->material.shininess);
@@ -402,6 +406,7 @@ void Render()
         glUniform3fv(loc_diffuse, 1, modelGamma->material.diffuse);
         glUniform3fv(loc_specular, 1, modelGamma->material.specular);
         glUniform1f(loc_shininess, modelGamma->material.shininess);
+        glUniform3fv(loc_ambient, 1, modelGamma->material.ambient);
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixGamma);
         modelGamma->Draw();
     }
@@ -414,6 +419,7 @@ void Render()
         glUniform3fv(loc_diffuse, 1, modelDragon->material.diffuse);
         glUniform3fv(loc_specular, 1, modelDragon->material.specular);
         glUniform1f(loc_shininess, modelDragon->material.shininess);
+        glUniform3fv(loc_ambient, 1, modelDragon->material.ambient);
         glUniformMatrix4fv(loc_world, 1, GL_FALSE, mWorldMatrixDragon);
         modelDragon->Draw();
     }
@@ -520,8 +526,8 @@ void Display(GLFWwindow* window)
         ImGui::SliderFloat("dragon_ambient0", &modelDragon->material.ambient[0], 0.0f, 1.0f);
         ImGui::SliderFloat("dragon_ambient1", &modelDragon->material.ambient[1], 0.0f, 1.0f);
         ImGui::SliderFloat("dragon_ambient2", &modelDragon->material.ambient[2], 0.0f, 1.0f);
-        ImGui::Checkbox("Toggle Dragon Texture", &hasTexture);
-        if(!hasTexture) 
+        ImGui::Checkbox("Toggle Dragon Texture", &modelDragon->material.hasTexture);
+        if(!modelDragon->material.hasTexture) 
         {
             ImGui::Text("Adjust Dragon Color : ");
             ImGui::SliderFloat("dragon_diffuse0", &modelDragon->material.diffuse[0], 0.0f, 1.0f);
@@ -557,10 +563,14 @@ void Display(GLFWwindow* window)
         ImGui::SliderFloat("Miles_ambient1", &modelMiles->material.ambient[1], 0.0f, 1.0f);
         ImGui::SliderFloat("Miles_ambient2", &modelMiles->material.ambient[2], 0.0f, 1.0f);
         ImGui::Spacing();
-        ImGui::Text("Adjust Miles Color : ");
-        ImGui::SliderFloat("Miles_diffuse0", &modelMiles->material.diffuse[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("Miles_diffuse1", &modelMiles->material.diffuse[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("Miles_diffuse2", &modelMiles->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Checkbox("Toggle Miles Texture", &modelMiles->material.hasTexture);
+        if(!modelMiles->material.hasTexture) 
+        {
+            ImGui::Text("Adjust Miles Color : ");
+            ImGui::SliderFloat("Miles_diffuse0", &modelMiles->material.diffuse[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("Miles_diffuse1", &modelMiles->material.diffuse[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("Miles_diffuse2", &modelMiles->material.diffuse[2], 0.0f, 1.0f);
+        }
         ImGui::Spacing();
         ImGui::Text("Adjust Miles Shininess : ");
         ImGui::SliderFloat("Miles_shininess", &modelMiles->material.shininess, 1.0f, 128.0f);
@@ -591,10 +601,14 @@ void Display(GLFWwindow* window)
         ImGui::SliderFloat("Gamma_ambient1", &modelGamma->material.ambient[1], 0.0f, 1.0f);
         ImGui::SliderFloat("Gamma_ambient2", &modelGamma->material.ambient[2], 0.0f, 1.0f);
         ImGui::Spacing();
-        ImGui::Text("Adjust Gamma Color : ");
-        ImGui::SliderFloat("Gamma_diffuse0", &modelGamma->material.diffuse[0], 0.0f, 1.0f);
-        ImGui::SliderFloat("Gamma_diffuse1", &modelGamma->material.diffuse[1], 0.0f, 1.0f);
-        ImGui::SliderFloat("Gamma_diffuse2", &modelGamma->material.diffuse[2], 0.0f, 1.0f);
+        ImGui::Checkbox("Toggle Gamma Texture", &modelGamma->material.hasTexture);
+        if(!modelGamma->material.hasTexture) 
+        {
+            ImGui::Text("Adjust Gamma Color : ");
+            ImGui::SliderFloat("Gamma_diffuse0", &modelGamma->material.diffuse[0], 0.0f, 1.0f);
+            ImGui::SliderFloat("Gamma_diffuse1", &modelGamma->material.diffuse[1], 0.0f, 1.0f);
+            ImGui::SliderFloat("Gamma_diffuse2", &modelGamma->material.diffuse[2], 0.0f, 1.0f);
+        }
         ImGui::Spacing();
         ImGui::Text("Adjust Gamma Shininess : ");
         ImGui::SliderFloat("Gamma_shininess", &modelGamma->material.shininess, 1.0f, 128.0f);

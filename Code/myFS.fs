@@ -13,6 +13,7 @@ const float ambientIntensity = 0.7;
 
 struct u_Material
 {
+    vec3 ambient;
     vec3 diffuse;
     vec3 specular;
     float shininess;
@@ -106,11 +107,11 @@ void main(void) {
     vec3 kD = vec3(1.0) - fresnelColor;
 
     float NdotSky = dot(N,SkyVec);
-    vec3 SkyColor = vec3(0.0,0.0,1.0);
-    vec3 GroundColor = vec3(0.0,1.0,0.0);
+    vec3 SkyColor = vec3(0.7,0.0,1.0);
+    vec3 GroundColor = vec3(0.3,1.0,0.0);
 
     float Hemispherefactor = NdotSky *0.5 +0.5;
-    vec3 ambiant = ambientIntensity * colorTotal.rgb * mix(GroundColor,SkyColor,Hemispherefactor);
+    vec3 ambiant = u_mat.ambient * colorTotal.rgb * mix(GroundColor,SkyColor,Hemispherefactor);
     //Mix
     vec3 PhongIllumination = ambiant + (diffuseColor * kD) + (specularColor * fresnelColor);
     FragColor = vec4(PhongIllumination, 1.0);

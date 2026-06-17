@@ -17,7 +17,7 @@ struct Material {
     float ambient[3] = {0.2f, 0.2f, 0.2f};
     float diffuse[3] = {0.8f, 0.8f, 0.8f};
     float specular[3] = {1.0f, 1.0f, 1.0f};
-    float shininess = 32.0f;
+    float shininess = 10.0f;
 
     bool hasTexture = false;   
     GLuint diffuseTexture = 0;
