@@ -3,7 +3,7 @@
 Projet réalisé en OpenGL 3.3 Core Profile (GLSL 330) par AUBRY Mathias et TOUSSAINT Nolan.
 
 ---
-
+[image](./Computer-graphics-img.png)
 ## Ce qui a été implémenté
 
 ### Partie 1 — Affichage
